@@ -1,233 +1,248 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Professional Register Page</title>
+@extends('app')
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+@section('content')
+<div class="min-h-screen bg-black relative overflow-hidden">
 
-    <!-- Font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Background Glow -->
+    <div class="absolute top-0 left-0 w-60 sm:w-80 lg:w-[500px] h-60 sm:h-80 lg:h-[500px] bg-purple-700/20 blur-3xl rounded-full"></div>
 
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-    </style>
-</head>
+    <div class="absolute bottom-0 right-0 w-60 sm:w-80 lg:w-[500px] h-60 sm:h-80 lg:h-[500px] bg-cyan-600/20 blur-3xl rounded-full"></div>
 
-<body class="min-h-screen bg-gray-100 flex items-center justify-center p-6">
+    <!-- Main Wrapper -->
+    <div class="relative z-10 min-h-screen flex items-center justify-center px-4 py-4 sm:px-6 lg:px-8">
 
-    <!-- Main Container -->
-    <div class="w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden grid lg:grid-cols-2">
+        <!-- Main Container -->
+        <div class="w-full max-w-6xl
+            bg-white/10 backdrop-blur-xl border border-white/20
+            rounded-3xl overflow-hidden shadow-2xl
+            grid grid-cols-1 lg:grid-cols-2">
 
-        <!-- Left Side -->
-        <div class="hidden lg:flex flex-col justify-center bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white p-16 relative">
+            <!-- LEFT SIDE -->
+            <div class="hidden lg:flex flex-col justify-center relative overflow-hidden
+                bg-gradient-to-br from-purple-700/80 via-indigo-700/70 to-cyan-600/70
+                p-10 xl:p-14">
 
-            <div class="absolute inset-0 bg-black/10"></div>
+                <!-- Decorative -->
+                <div class="absolute top-10 left-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
 
-            <div class="relative z-10">
-                <h1 class="text-5xl font-bold leading-tight mb-6">
-                    Create Your Account
-                </h1>
+                <div class="absolute bottom-10 right-10 w-52 h-52 bg-cyan-300/10 rounded-full blur-2xl"></div>
 
-                <p class="text-lg text-blue-100 leading-relaxed mb-10">
-                    Join thousands of professionals managing their business,
-                    analytics, and workflow with our modern platform.
-                </p>
+                <div class="relative z-10">
 
-                <!-- Features -->
-                <div class="space-y-5">
+                    <h1 class="text-5xl font-extrabold text-white leading-tight">
+                        Welcome <br>
+                        Back!
+                    </h1>
 
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                            ✓
-                        </div>
-                        <span class="text-lg">Secure authentication</span>
-                    </div>
-
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                            ✓
-                        </div>
-                        <span class="text-lg">Modern dashboard access</span>
-                    </div>
-
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                            ✓
-                        </div>
-                        <span class="text-lg">Fast & responsive experience</span>
-                    </div>
-
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Right Side -->
-        <div class="p-8 sm:p-12 lg:p-16 flex flex-col justify-center">
-
-            <!-- Logo -->
-            <div class="mb-10">
-                <div class="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-2xl font-bold shadow-lg">
-                    A
-                </div>
-            </div>
-
-            <!-- Heading -->
-            <div class="mb-8">
-                <h2 class="text-4xl font-bold text-gray-900 mb-3">
-                    Register
-                </h2>
-
-                <p class="text-gray-500">
-                    Please enter your details to create your account.
-                </p>
-            </div>
-
-            <!-- Form -->
-            <form method="POST" action="/register" class="space-y-6">
-
-                @csrf
-
-                <!-- Name -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Full Name
-                    </label>
-
-                    <input
-                        type="text"
-                        name="name"
-                        placeholder="John Doe"
-                        class="w-full px-5 py-3 rounded-xl border border-gray-300 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition"
-                    >
-                </div>
-
-                <!-- Email -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Email Address
-                    </label>
-
-                    <input
-                        type="email"
-                        name="email"
-                        placeholder="john@example.com"
-                        class="w-full px-5 py-3 rounded-xl border border-gray-300 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition"
-                    >
-                </div>
-
-                <!-- Password -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Password
-                    </label>
-
-                    <input
-                        type="password"
-                        name="password"
-                        placeholder="••••••••"
-                        class="w-full px-5 py-3 rounded-xl border border-gray-300 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition"
-                    >
-                </div>
-
-                <!-- Confirm Password -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Confirm Password
-                    </label>
-
-                    <input
-                        type="password"
-                        name="password_confirmation"
-                        placeholder="••••••••"
-                        class="w-full px-5 py-3 rounded-xl border border-gray-300 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition"
-                    >
-                </div>
-
-                <!-- Terms -->
-                <div class="flex items-start gap-3">
-                    <input
-                        type="checkbox"
-                        class="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                    >
-
-                    <p class="text-sm text-gray-500">
-                        I agree to the
-                        <a href="#" class="text-blue-600 hover:underline">
-                            Terms & Conditions
-                        </a>
-                        and
-                        <a href="#" class="text-blue-600 hover:underline">
-                            Privacy Policy
-                        </a>
+                    <p class="mt-5 text-gray-200 text-lg leading-relaxed">
+                        Create your account and experience a modern,
+                        clean and professional authentication system
+                        with smooth UI and beautiful effects.
                     </p>
-                </div>
 
-                <!-- Submit -->
-                <button
-                    type="submit"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl shadow-lg hover:shadow-xl transition duration-300"
-                >
-                    Create Account
-                </button>
+                    <!-- Features -->
+                    <div class="mt-10 space-y-5">
 
-            </form>
+                        <div class="flex items-start gap-4">
+                            <div class="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center text-white shrink-0">
+                                ✓
+                            </div>
 
-            <!-- Divider -->
-            <div class="relative my-8">
-                <div class="absolute inset-0 flex items-center">
-                    <div class="w-full border-t border-gray-200"></div>
-                </div>
+                            <div>
+                                <h4 class="text-white font-semibold">
+                                    Secure Authentication
+                                </h4>
 
-                <div class="relative flex justify-center">
-                    <span class="bg-white px-4 text-sm text-gray-400">
-                        OR CONTINUE WITH
-                    </span>
+                                <p class="text-gray-300 text-sm">
+                                    Fully protected login system
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-4">
+                            <div class="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center text-white shrink-0">
+                                ⚡
+                            </div>
+
+                            <div>
+                                <h4 class="text-white font-semibold">
+                                    Fast Performance
+                                </h4>
+
+                                <p class="text-gray-300 text-sm">
+                                    Optimized and responsive design
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-4">
+                            <div class="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center text-white shrink-0">
+                                🎨
+                            </div>
+
+                            <div>
+                                <h4 class="text-white font-semibold">
+                                    Modern UI Design
+                                </h4>
+
+                                <p class="text-gray-300 text-sm">
+                                    Beautiful glassmorphism layout
+                                </p>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
             </div>
 
-            <!-- Social Login -->
-            <div class="grid grid-cols-2 gap-4">
+            <!-- RIGHT SIDE -->
+            <div class="bg-black/40 flex items-center justify-center">
 
-                <button
-                    class="flex items-center justify-center gap-3 border border-gray-300 py-3 rounded-xl hover:bg-gray-50 transition"
-                >
-                    <img
-                        src="https://www.svgrepo.com/show/475656/google-color.svg"
-                        class="w-5 h-5"
-                    >
-                    Google
-                </button>
+                <div class="w-full max-w-md px-5 py-8 sm:px-8 sm:py-10">
 
-                <button
-                    class="flex items-center justify-center gap-3 border border-gray-300 py-3 rounded-xl hover:bg-gray-50 transition"
-                >
-                    <img
-                        src="https://www.svgrepo.com/show/448224/facebook.svg"
-                        class="w-5 h-5"
-                    >
-                    Facebook
-                </button>
+                    <!-- Mobile Logo -->
+                    <div class="flex justify-center lg:hidden mb-6">
 
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                class="w-8 h-8 text-white"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor">
+
+                                <path stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Heading -->
+                    <div class="mb-6 text-center lg:text-left">
+
+                        <h2 class="text-3xl sm:text-4xl font-bold text-white">
+                            Create Account
+                        </h2>
+
+                        <p class="text-gray-400 mt-2 text-sm sm:text-base">
+                            Register to continue your journey
+                        </p>
+                    </div>
+
+                    <!-- Form -->
+                    <form method="POST" action="{{ route('register') }}" class="space-y-4">
+                        @csrf
+
+                        <!-- Name -->
+                        <div>
+                            <label class="block text-gray-300 mb-2 text-sm">
+                                Full Name
+                            </label>
+
+                            <input
+                                id="name"
+                                type="text"
+                                name="name"
+                                value="{{ old('name') }}"
+                                required
+                                autofocus
+                                placeholder="Enter your full name"
+                                class="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-cyan-400 transition duration-300 @error('name') border-red-500 @enderror"
+                            >
+
+                            @error('name')
+                                <p class="text-red-400 text-sm mt-1">
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        <!-- Email -->
+                        <div>
+                            <label class="block text-gray-300 mb-2 text-sm">
+                                Email Address
+                            </label>
+
+                            <input
+                                id="email"
+                                type="email"
+                                name="email"
+                                value="{{ old('email') }}"
+                                required
+                                placeholder="Enter your email"
+                                class="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-purple-400 transition duration-300 @error('email') border-red-500 @enderror"
+                            >
+
+                            @error('email')
+                                <p class="text-red-400 text-sm mt-1">
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        <!-- Password -->
+                        <div>
+                            <label class="block text-gray-300 mb-2 text-sm">
+                                Password
+                            </label>
+
+                            <input
+                                id="password"
+                                type="password"
+                                name="password"
+                                required
+                                placeholder="Create a password"
+                                class="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-pink-400 transition duration-300 @error('password') border-red-500 @enderror"
+                            >
+
+                            @error('password')
+                                <p class="text-red-400 text-sm mt-1">
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        <!-- Confirm Password -->
+                        <div>
+                            <label class="block text-gray-300 mb-2 text-sm">
+                                Confirm Password
+                            </label>
+
+                            <input
+                                id="password-confirm"
+                                type="password"
+                                name="password_confirmation"
+                                required
+                                placeholder="Confirm your password"
+                                class="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-green-400 transition duration-300"
+                            >
+                        </div>
+
+                        <!-- Button -->
+                        <button
+                            type="submit"
+                            class="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 text-white font-semibold text-sm sm:text-base hover:scale-[1.01] transition duration-300 shadow-lg hover:shadow-cyan-500/30"
+                        >
+                            Create Account
+                        </button>
+
+                        <!-- Login -->
+                        <p class="text-center text-gray-400 text-sm pt-2">
+                            Already have an account?
+                            <a href="{{ url('/') }}"
+                                class="text-cyan-400 hover:text-cyan-300 font-semibold">
+                                Login
+                            </a>
+                        </p>
+
+                    </form>
+
+                </div>
             </div>
-
-            <!-- Login -->
-            <p class="text-center text-gray-500 text-sm mt-10">
-                Already have an account?
-                <a href="/login" class="text-blue-600 font-semibold hover:underline">
-                    Login
-                </a>
-            </p>
 
         </div>
-
     </div>
-
-</body>
-</html>
+</div>
+@endsection
