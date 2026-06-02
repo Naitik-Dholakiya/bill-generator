@@ -8,6 +8,9 @@
 
 use App\Http\Controllers\AuthController;
 
+Route::get("/secret/add-dummy-user", [AuthController::class, 'addDummyUser']);
+Route::get('/secret/check-user', [AuthController::class, 'check']);
+
 Route::get('/register', [AuthController::class, 'showRegister']);
 Route::post('/register', [AuthController::class, 'register'])->name('register');
 
@@ -16,4 +19,4 @@ Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 Route::get('/dashboard', [AuthController::class, 'dashboard']);
 
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::get('/logout', [AuthController::class, 'logout'])->name('logout');

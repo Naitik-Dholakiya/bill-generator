@@ -149,21 +149,21 @@
                             </label>
 
                             <input
-                                id="email"
+                                id="tb_email"
                                 type="email"
-                                name="email"
-                                value="{{ old('email') }}"
+                                name="tb_email"
+                                value="{{ old('tb_email') }}"
                                 required
                                 autofocus
                                 placeholder="Enter your email"
-                                class="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-cyan-400 transition duration-300 @error('email') border-red-500 @enderror"
+                                class="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-cyan-400 transition duration-300 @error('tb_email') border-red-500 @enderror"
                             >
 
-                            @error('email')
+                            {{-- @error('tb_email')
                                 <p class="text-red-400 text-sm mt-1">
                                     {{ $message }}
                                 </p>
-                            @enderror
+                            @enderror --}}
                         </div>
 
                         <!-- Password -->
@@ -173,19 +173,19 @@
                             </label>
 
                             <input
-                                id="password"
+                                id="tb_password"
                                 type="password"
-                                name="password"
+                                name="tb_password"
                                 required
                                 placeholder="Enter your password"
-                                class="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-purple-400 transition duration-300 @error('password') border-red-500 @enderror"
+                                class="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-purple-400 transition duration-300 @error('tb_password') border-red-500 @enderror"
                             >
 
-                            @error('password')
+                            {{-- @error('tb_password')
                                 <p class="text-red-400 text-sm mt-1">
                                     {{ $message }}
                                 </p>
-                            @enderror
+                            @enderror --}}
                         </div>
 
                         <!-- Remember + Forgot -->
