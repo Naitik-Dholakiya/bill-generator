@@ -1,4 +1,4 @@
-@extends('app')
+@extends('layouts.app')
 
 @section('content')
 
@@ -202,7 +202,7 @@
                             </label>
 
                             @if (Route::has('password.request'))
-                                <a href="{{ route('password.request') }}"
+                                <a href="#"
                                     class="text-sm text-cyan-400 hover:text-cyan-300 transition">
                                     Forgot Password?
                                 </a>

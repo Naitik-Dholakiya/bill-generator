@@ -63,7 +63,7 @@ class AuthController extends Controller
             return redirect('/');
         }
 
-        return view('auth.dashboard');
+        return view('dashboard.dashboard');
     }
 
     public function logout()
