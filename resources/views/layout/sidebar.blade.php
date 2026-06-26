@@ -37,13 +37,22 @@
             <span>Dashboard</span>
         </a>
         {{-- {{ route('customers.index') }} --}}
-        <a href="#"
+        <a href="{{ route('customers.index') }}"
             class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-300
                    hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors mb-0.5
                    {{ request()->routeIs('customers.*') ? 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-white font-medium' : '' }}">
             <i class="ti ti-users text-base flex-shrink-0" aria-hidden="true"></i>
             <span>Customers</span>
         </a>
+        
+        <a href="{{ route('suppliers.index') }}"
+            class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-300
+                   hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors mb-0.5
+                   {{ request()->routeIs('suppliers.*') ? 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-white font-medium' : '' }}">
+            <i class="ti ti-package text-base flex-shrink-0" aria-hidden="true"></i>
+            <span>Suppliers</span>
+        </a>
+
         {{-- {{ route('products.index') }} --}}
         <a href="#"
             class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-300

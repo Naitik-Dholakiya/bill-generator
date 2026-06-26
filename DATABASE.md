@@ -99,41 +99,210 @@ CREATE TABLE `usermaster` (
 ```
 # CUSTOMER MANAGEMENT
 
-## customers
+# Customer Master Table
 
-Stores customer information.
+Stores customer information used for billing, invoicing, quotations, and sales transactions.
 
-| Column           | Type         | Constraints               |
-| ---------------- | ------------ | ------------------------- |
-| customer_id      | INT          | PK, AUTO_INCREMENT        |
-| customer_name    | VARCHAR(100) | NOT NULL                  |
-| email            | VARCHAR(100) | UNIQUE                    |
-| phone            | VARCHAR(15)  | NULL                      |
-| gst_number       | VARCHAR(30)  | NULL                      |
-| billing_address  | TEXT         | NULL                      |
-| shipping_address | TEXT         | NULL                      |
-| created_at       | TIMESTAMP    | DEFAULT CURRENT_TIMESTAMP |
+| Column Name      | Data Type         | Nullable | Default        | Description                          |
+| :--------------- | :---------------- | :------: | :------------: | :----------------------------------: |
+| customer_id      | BIGINT UNSIGNED   |    No    | Auto Increment | Primary Key                          |
+| customer_code    | VARCHAR(20)       |    No    |       -        | Unique Customer Code (CUS0001)       |
+| customer_name    | VARCHAR(100)      |    No    |       -        | Customer Name                        |
+| email            | VARCHAR(100)      |   Yes    |      NULL      | Customer Email Address               |
+| phone            | VARCHAR(20)       |   Yes    |      NULL      | Customer Phone Number                |
+| gst_number       | VARCHAR(15)       |   Yes    |      NULL      | GST Identification Number            |
+| billing_address  | TEXT              |   Yes    |      NULL      | Customer Billing Address             |
+| shipping_address | TEXT              |   Yes    |      NULL      | Customer Shipping Address            |
+| status           | ENUM('0','1')     |    No    |      '1'       | 0 = Inactive, 1 = Active             |
+| created_by       | BIGINT UNSIGNED   |   Yes    |      NULL      | User Who Created Record              |
+| updated_by       | BIGINT UNSIGNED   |   Yes    |      NULL      | User Who Last Updated Record         |
+| created_at       | TIMESTAMP         |   Yes    |      NULL      | Record Creation Timestamp            |
+| updated_at       | TIMESTAMP         |   Yes    |      NULL      | Last Update Timestamp                |
+| deleted_at       | TIMESTAMP         |   Yes    |      NULL      | Soft Delete Timestamp                |
 
----
+## Notes
+
+### Primary Key
+
+- `customer_id`
+
+### Customer Code
+
+- Auto-generated unique code.
+- Examples:
+  - `CUS0001`
+  - `CUS0002`
+  - `CUS0003`
+
+### Status
+
+| Value | Meaning |
+| ------- | ------- |
+| 0 | Inactive |
+| 1 | Active |
+
+### GST Number
+
+- Should be unique when provided.
+- Can be NULL for customers without GST registration.
+
+### Soft Delete
+
+- Records are not permanently deleted.
+- Deleted records are marked using the `deleted_at` column.
+
+## Relationships
+
+| Column | References |
+| ------- | ------- |
+| created_by | users.id |
+| updated_by | users.id |
+
+## SQL Definition
+
+```sql
+CREATE TABLE `customers` (
+  `customer_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `customer_code` varchar(20) NOT NULL,
+  `customer_name` varchar(100) NOT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `gst_number` varchar(15) DEFAULT NULL,
+  `billing_address` text DEFAULT NULL,
+  `shipping_address` text DEFAULT NULL,
+  `status` enum('0','1') NOT NULL DEFAULT '1' COMMENT '0: Inactive, 1: Active',
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `updated_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+
+  PRIMARY KEY (`customer_id`),
+
+  UNIQUE KEY `customers_customer_code_unique` (`customer_code`),
+  UNIQUE KEY `customers_email_unique` (`email`),
+  UNIQUE KEY `customers_gst_number_unique` (`gst_number`)
+);
+```
 
 # SUPPLIER MANAGEMENT
 
-## suppliers
+# Supplier Master Table
 
-Stores supplier information.
+Stores supplier information used for purchases, procurement, inventory management, expense tracking, and vendor transactions.
 
-| Column         | Type         | Constraints               |
-| -------------- | ------------ | ------------------------- |
-| supplier_id    | INT          | PK, AUTO_INCREMENT        |
-| supplier_name  | VARCHAR(100) | NOT NULL                  |
-| contact_person | VARCHAR(100) | NULL                      |
-| email          | VARCHAR(100) | NULL                      |
-| phone          | VARCHAR(15)  | NULL                      |
-| address        | TEXT         | NULL                      |
-| gst_number     | VARCHAR(30)  | NULL                      |
-| created_at     | TIMESTAMP    | DEFAULT CURRENT_TIMESTAMP |
+| Column Name      | Data Type       | Nullable |     Default    | Description                                  |
+| :--------------- | :-------------- | :------: | :------------: | :------------------------------------------- |
+| supplier_id      | BIGINT UNSIGNED |    No    | Auto Increment | Primary Key                                  |
+| supplier_code    | VARCHAR(20)     |    No    |        -       | Unique Supplier Code (SUP010001)             |
+| supplier_name    | VARCHAR(100)    |    No    |        -       | Supplier Name                                |
+| contact_person   | VARCHAR(100)    |    Yes   |      NULL      | Supplier Contact Person                      |
+| email            | VARCHAR(100)    |    Yes   |      NULL      | Supplier Email Address                       |
+| phone            | VARCHAR(20)     |    Yes   |      NULL      | Supplier Phone Number                        |
+| gst_number       | VARCHAR(15)     |    Yes   |      NULL      | GST Identification Number                    |
+| billing_address  | TEXT            |    Yes   |      NULL      | Supplier Billing Address                     |
+| shipping_address | TEXT            |    Yes   |      NULL      | Supplier Shipping Address                    |
+| status           | ENUM('0','1')   |    No    |       '1'      | 0 = Inactive, 1 = Active                     |
+| created_by       | BIGINT UNSIGNED |    Yes   |      NULL      | User Who Created Record (usermaster.user_id) |
+| updated_by       | BIGINT UNSIGNED |    Yes   |      NULL      | User Who Last Updated Record                 |
+| created_at       | TIMESTAMP       |    Yes   |      NULL      | Record Creation Timestamp                    |
+| updated_at       | TIMESTAMP       |    Yes   |      NULL      | Last Update Timestamp                        |
+| deleted_at       | TIMESTAMP       |    Yes   |      NULL      | Soft Delete Timestamp                        |
 
 ---
+
+## Notes
+
+### Primary Key
+
+* `supplier_id`
+
+### Supplier Code
+
+Uses the same logic as Customer Code.
+
+Format:
+
+```text
+SUP(UserID)(Sequence)
+```
+
+Examples:
+
+```text
+SUP010001
+SUP010002
+SUP010003
+
+SUP020001
+SUP020002
+```
+
+Where:
+
+| Part | Meaning                  |
+| ---- | ------------------------ |
+| SUP  | Supplier Prefix          |
+| 01   | User ID from usermaster  |
+| 0001 | Supplier Sequence Number |
+
+Example:
+
+If user_id = 1 creates suppliers:
+
+```text
+SUP010001
+SUP010002
+SUP010003
+```
+
+If user_id = 2 creates suppliers:
+
+```text
+SUP020001
+SUP020002
+SUP020003
+```
+
+This ensures supplier codes remain unique even when multiple users create suppliers.
+
+## Relationships
+
+| Column     | References         |
+| ---------- | ------------------ |
+| created_by | usermaster.user_id |
+| updated_by | usermaster.user_id |
+
+---
+
+## SQL Definition
+
+```sql
+CREATE TABLE `suppliermaster` (
+  `supplier_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `supplier_code` varchar(20) NOT NULL,
+  `supplier_name` varchar(100) NOT NULL,
+  `contact_person` varchar(100) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `gst_number` varchar(15) DEFAULT NULL,
+  `billing_address` text DEFAULT NULL,
+  `shipping_address` text DEFAULT NULL,
+  `status` enum('0','1') NOT NULL DEFAULT '1' COMMENT '0: Inactive, 1: Active',
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `updated_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+
+  PRIMARY KEY (`supplier_id`),
+
+  UNIQUE KEY `suppliermaster_supplier_code_unique` (`supplier_code`),
+  UNIQUE KEY `suppliermaster_email_unique` (`email`),
+  UNIQUE KEY `suppliermaster_gst_number_unique` (`gst_number`)
+);
+```
+
 
 # PRODUCT MANAGEMENT
 
