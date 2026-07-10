@@ -24,8 +24,7 @@ return new class extends Migration
 
             $table->string('gst_number', 15)->nullable()->unique();
 
-            $table->text('billing_address')->nullable();
-            $table->text('shipping_address')->nullable();
+            $table->text('supplier_address')->nullable();
 
             $table->enum('status', ['0', '1'])
                 ->default('1')

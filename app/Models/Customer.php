@@ -8,8 +8,6 @@ use App\Models\usermaster;
 
 class Customer extends Model
 {
-    use SoftDeletes;
-
     protected $table = 'customermaster';
     protected $primaryKey = 'customer_id';
 

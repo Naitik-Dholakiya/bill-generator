@@ -26,8 +26,8 @@ return new class extends Migration
 
             $table->text('shipping_address')->nullable();
 
-            $table->enum('status', ['Active', 'Inactive'])
-                ->default('Active');
+            $table->enum('status', ['1', '0'])
+                ->default('1');
 
             $table->unsignedBigInteger('created_by')->nullable();
 

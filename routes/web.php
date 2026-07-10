@@ -5,6 +5,9 @@
 // Route::get('/', function () {
 //     return view('welcome');
 // });
+// Route::get('/csrf-token', function () {
+//     return response()->json(['token' => csrf_token()]);
+// });
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\settingController;
@@ -41,3 +44,10 @@ Route::delete('/customer/delete/{id}', [CustomerController::class, 'deleteCustom
 // Route::delete('/customer/permanent-delete/{id}', [CustomerController::class, '#'])->name('permanentDeleteCustomer');
 
 Route::get('/suppliers/dashboard', [supplierController::class, 'index'])->name('suppliers.index');
+
+Route::get('/suppliers/create', [supplierController::class,'createSupplier'])->name('createSupplier');
+Route::post('/suppliers/create', [supplierController::class,'createSupplierPost'])->name('createSupplierPost');
+Route::get('/supplier/view/{id}', [supplierController::class, 'viewSupplier'])->name('supplier.view');
+Route::get('/supplier/edit/{id}', [supplierController::class, 'editSupplier'])->name('supplier.edit');
+Route::put('/supplier/edit/{id}', [supplierController::class, 'editSupplierPost'])->name('editSupplierPost');
+Route::delete('/supplier/delete/{id}', [supplierController::class, 'deleteSupplier'])->name('supplier.delete');

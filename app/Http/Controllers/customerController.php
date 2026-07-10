@@ -14,6 +14,7 @@ class customerController extends Controller
     {
         $userId = request()->cookies->get('GTA');
         $customers = Customer::where('created_by', $userId)
+            ->where('status', '1')
             ->orderByDesc('customer_id')
             ->paginate(10);
 
@@ -26,7 +27,7 @@ class customerController extends Controller
 
         // Find last customer of this user
         $lastCustomer = Customer::where('created_by', $userId)
-            ->orderByDesc('customer_id')
+            ->latest('customer_id')
             ->first();
 
         $nextNumber = 1;

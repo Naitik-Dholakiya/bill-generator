@@ -7,8 +7,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SupplierMaster extends Model
 {
-    use SoftDeletes;
-
     protected $table = 'suppliermaster';
 
     protected $primaryKey = 'supplier_id';
