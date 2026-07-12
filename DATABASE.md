@@ -303,69 +303,259 @@ CREATE TABLE `suppliermaster` (
 );
 ```
 
-
 # PRODUCT MANAGEMENT
 
-## categories
+# Category Master Table
 
-Stores product categories.
+Stores product categories used to classify products.
 
-| Column        | Type         | Constraints        |
-| ------------- | ------------ | ------------------ |
-| category_id   | INT          | PK, AUTO_INCREMENT |
-| category_name | VARCHAR(100) | UNIQUE, NOT NULL   |
-| description   | TEXT         | NULL               |
+| Column Name  | Data Type         | Nullable | Default        | Description                                  |
+| :----------- | :---------------- | :------: | :------------: | :------------------------------------------: |
+| category_id  | BIGINT UNSIGNED   |    No    | Auto Increment | Primary Key                                  |
+| category_name| VARCHAR(100)      |    No    |       -        | Category Name                                |
+| description  | TEXT              |   Yes    |      NULL      | Category Description                         |
+| status       | ENUM('0','1')     |    No    |      '1'       | 0 = Inactive, 1 = Active                     |
+| created_by   | BIGINT UNSIGNED   |   Yes    |      NULL      | User Who Created Record                      |
+| updated_by   | BIGINT UNSIGNED   |   Yes    |      NULL      | User Who Last Updated Record                 |
+| created_at   | TIMESTAMP         |   Yes    |      NULL      | Record Creation Timestamp                    |
+| updated_at   | TIMESTAMP         |   Yes    |      NULL      | Last Update Timestamp                        |
+| deleted_at   | TIMESTAMP         |   Yes    |      NULL      | Soft Delete Timestamp                        |
+
+## Notes
+
+### Primary Key
+
+- `category_id`
+
+### Status
+
+| Value | Meaning |
+| ------- | ------- |
+| 0 | Inactive |
+| 1 | Active |
+
+### Relationships
+
+| Column | References |
+| ------- | ---------- |
+| created_by | usermaster.user_id |
+| updated_by | usermaster.user_id |
+
+## SQL Definition
+
+```sql
+CREATE TABLE `categorymaster` (
+  `category_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `category_code` varchar(20) NOT NULL,
+  `category_name` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `status` enum('0','1') NOT NULL DEFAULT '1' COMMENT '0: Inactive, 1: Active',
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `updated_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+
+  PRIMARY KEY (`category_id`),
+
+  UNIQUE KEY `categorymaster_category_code_unique` (`category_code`),
+  UNIQUE KEY `categorymaster_createdby_categoryname_unique` (`created_by`,`category_name`)
+);
+```
 
 ---
 
-## products
+# Tax Master Table
 
-Stores product details.
+Stores product tax information such as GST or VAT.
 
-| Column         | Type                      | Constraints                  |
-| -------------- | ------------------------- | ---------------------------- |
-| product_id     | INT                       | PK, AUTO_INCREMENT           |
-| category_id    | INT                       | FK -> categories.category_id |
-| supplier_id    | INT                       | FK -> suppliers.supplier_id  |
-| product_name   | VARCHAR(150)              | NOT NULL                     |
-| sku            | VARCHAR(50)               | UNIQUE                       |
-| barcode        | VARCHAR(100)              | UNIQUE                       |
-| unit_price     | DECIMAL(10,2)             | NOT NULL                     |
-| purchase_price | DECIMAL(10,2)             | NOT NULL                     |
-| tax_id         | INT                       | FK -> taxes.tax_id           |
-| reorder_level  | INT                       | DEFAULT 0                    |
-| status         | ENUM('active','inactive') | DEFAULT 'active'             |
-| created_at     | TIMESTAMP                 | DEFAULT CURRENT_TIMESTAMP    |
+| Column Name    | Data Type         | Nullable | Default        | Description                          |
+| :------------- | :---------------- | :------: | :------------: | :----------------------------------: |
+| tax_id         | BIGINT UNSIGNED   |    No    | Auto Increment | Primary Key                          |
+| tax_name       | VARCHAR(50)       |    No    |       -        | Tax Name                             |
+| tax_percentage | DECIMAL(5,2)      |    No    |      0.00      | Tax Percentage                       |
+| status         | ENUM('0','1')     |    No    |      '1'       | 0 = Inactive, 1 = Active             |
+| created_by     | BIGINT UNSIGNED   |   Yes    |      NULL      | User Who Created Record              |
+| updated_by     | BIGINT UNSIGNED   |   Yes    |      NULL      | User Who Last Updated Record         |
+| created_at     | TIMESTAMP         |   Yes    |      NULL      | Record Creation Timestamp            |
+| updated_at     | TIMESTAMP         |   Yes    |      NULL      | Last Update Timestamp                |
+| deleted_at     | TIMESTAMP         |   Yes    |      NULL      | Soft Delete Timestamp                |
+
+## Notes
+
+### Primary Key
+
+- `tax_id`
+
+### Relationships
+
+| Column | References |
+| ------- | ---------- |
+| created_by | usermaster.user_id |
+| updated_by | usermaster.user_id |
+
+## SQL Definition
+
+```sql
+CREATE TABLE `taxmaster` (
+  `tax_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `tax_name` varchar(50) NOT NULL,
+  `tax_percentage` decimal(5,2) NOT NULL DEFAULT '0.00',
+  `status` enum('0','1') NOT NULL DEFAULT '1',
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `updated_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+
+  PRIMARY KEY (`tax_id`)
+);
+```
 
 ---
 
-## inventory
+# Product Master Table
 
-Tracks product stock.
+Stores product information used in purchasing, inventory, quotations, invoices, and sales.
 
-| Column            | Type      | Constraints                                           |
-| ----------------- | --------- | ----------------------------------------------------- |
-| inventory_id      | INT       | PK, AUTO_INCREMENT                                    |
-| product_id        | INT       | FK -> products.product_id                             |
-| quantity_in_stock | INT       | NOT NULL                                              |
-| last_updated      | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP |
+| Column Name     | Data Type         | Nullable | Default        | Description                                  |
+| :-------------- | :---------------- | :------: | :------------: | :------------------------------------------: |
+| product_id      | BIGINT UNSIGNED   |    No    | Auto Increment | Primary Key                                  |
+| product_code    | VARCHAR(20)       |    No    |       -        | Unique Product Code (PRD010001)              |
+| product_name    | VARCHAR(150)      |    No    |       -        | Product Name                                 |
+| category_id     | BIGINT UNSIGNED   |    No    |       -        | Category Reference                           |
+| supplier_id     | BIGINT UNSIGNED   |   Yes    |      NULL      | Supplier Reference                           |
+| tax_id          | BIGINT UNSIGNED   |   Yes    |      NULL      | Tax Reference                                |
+| sku             | VARCHAR(50)       |   Yes    |      NULL      | Stock Keeping Unit                           |
+| barcode         | VARCHAR(100)      |   Yes    |      NULL      | Barcode                                      |
+| purchase_price  | DECIMAL(10,2)     |    No    |      0.00      | Purchase Price                               |
+| selling_price   | DECIMAL(10,2)     |    No    |      0.00      | Selling Price                                |
+| reorder_level   | INT               |    No    |       0        | Minimum Stock Level                          |
+| status          | ENUM('0','1')     |    No    |      '1'       | 0 = Inactive, 1 = Active                     |
+| created_by      | BIGINT UNSIGNED   |   Yes    |      NULL      | User Who Created Record                      |
+| updated_by      | BIGINT UNSIGNED   |   Yes    |      NULL      | User Who Last Updated Record                 |
+| created_at      | TIMESTAMP         |   Yes    |      NULL      | Record Creation Timestamp                    |
+| updated_at      | TIMESTAMP         |   Yes    |      NULL      | Last Update Timestamp                        |
+| deleted_at      | TIMESTAMP         |   Yes    |      NULL      | Soft Delete Timestamp                        |
+
+## Notes
+
+### Primary Key
+
+- `product_id`
+
+### Product Code
+
+Auto-generated unique code.
+
+Format:
+
+```text
+PRD(UserID)(Sequence)
+```
+
+Examples:
+
+```text
+PRD010001
+PRD010002
+PRD020001
+```
+
+### Status
+
+| Value | Meaning |
+| ------- | ------- |
+| 0 | Inactive |
+| 1 | Active |
+
+### Relationships
+
+| Column | References |
+| ------- | ---------- |
+| category_id | categorymaster.category_id |
+| supplier_id | suppliermaster.supplier_id |
+| tax_id | taxmaster.tax_id |
+| created_by | usermaster.user_id |
+| updated_by | usermaster.user_id |
+
+### Unique Constraints
+
+- `product_code`
+- (`created_by`, `sku`)
+- (`created_by`, `barcode`)
+- (`created_by`, `product_name`)
+
+## SQL Definition
+
+```sql
+CREATE TABLE `productmaster` (
+  `product_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `product_code` varchar(20) NOT NULL,
+  `product_name` varchar(150) NOT NULL,
+  `category_id` bigint(20) UNSIGNED NOT NULL,
+  `supplier_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `tax_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `sku` varchar(50) DEFAULT NULL,
+  `barcode` varchar(100) DEFAULT NULL,
+  `purchase_price` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `selling_price` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `reorder_level` int NOT NULL DEFAULT '0',
+  `status` enum('0','1') NOT NULL DEFAULT '1',
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `updated_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+
+  PRIMARY KEY (`product_id`),
+
+  UNIQUE KEY `productmaster_product_code_unique` (`product_code`),
+  UNIQUE KEY `productmaster_createdby_sku_unique` (`created_by`,`sku`),
+  UNIQUE KEY `productmaster_createdby_barcode_unique` (`created_by`,`barcode`),
+  UNIQUE KEY `productmaster_createdby_productname_unique` (`created_by`,`product_name`)
+);
+```
 
 ---
 
-# TAX MANAGEMENT
+# Inventory Master Table
 
-## taxes
+Stores the current stock available for each product.
 
-Stores tax information.
+| Column Name       | Data Type       | Nullable | Default        | Description                 |
+| :---------------- | :-------------- | :------: | :------------: | :-------------------------: |
+| inventory_id      | BIGINT UNSIGNED |    No    | Auto Increment | Primary Key                 |
+| product_id        | BIGINT UNSIGNED |    No    |       -        | Product Reference           |
+| quantity_in_stock | INT             |    No    |       0        | Available Quantity          |
+| last_updated      | TIMESTAMP       |   Yes    | CURRENT_TIMESTAMP | Last Stock Update       |
 
-| Column         | Type         | Constraints        |
-| -------------- | ------------ | ------------------ |
-| tax_id         | INT          | PK, AUTO_INCREMENT |
-| tax_name       | VARCHAR(50)  | NOT NULL           |
-| tax_percentage | DECIMAL(5,2) | NOT NULL           |
-| description    | TEXT         | NULL               |
+## Notes
 
----
+### Primary Key
+
+- `inventory_id`
+
+### Relationships
+
+| Column | References |
+| ------- | ---------- |
+| product_id | productmaster.product_id |
+
+## SQL Definition
+
+```sql
+CREATE TABLE `inventorymaster` (
+  `inventory_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `product_id` bigint(20) UNSIGNED NOT NULL,
+  `quantity_in_stock` int NOT NULL DEFAULT '0',
+  `last_updated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`inventory_id`),
+
+  UNIQUE KEY `inventorymaster_product_unique` (`product_id`)
+);
+```
 
 # DISCOUNT MANAGEMENT
 

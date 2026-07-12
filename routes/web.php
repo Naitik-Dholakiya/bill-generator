@@ -13,6 +13,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\settingController;
 use App\Http\Controllers\customerController;
 use App\Http\Controllers\supplierController;
+use App\Http\Controllers\productController;
 
 Route::get("/secret/add-dummy-user", [AuthController::class, 'addDummyUser']);
 Route::get('/secret/check-user', [AuthController::class, 'check']);
@@ -51,3 +52,11 @@ Route::get('/supplier/view/{id}', [supplierController::class, 'viewSupplier'])->
 Route::get('/supplier/edit/{id}', [supplierController::class, 'editSupplier'])->name('supplier.edit');
 Route::put('/supplier/edit/{id}', [supplierController::class, 'editSupplierPost'])->name('editSupplierPost');
 Route::delete('/supplier/delete/{id}', [supplierController::class, 'deleteSupplier'])->name('supplier.delete');
+
+Route::get('/products/dashboard', [productController::class, 'index'])->name('products.index');
+Route::get('/products/create', [productController::class,'createProduct'])->name('products.create');
+Route::post('/products/create', [productController::class,'createProductPost'])->name('createProductPost');
+
+// Ajax route for storing category data
+Route::post('/category/ajax/store', [productController::class, 'storeAjaxCategory'])
+    ->name('category.store.ajax');
