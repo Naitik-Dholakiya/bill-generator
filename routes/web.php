@@ -56,6 +56,10 @@ Route::delete('/supplier/delete/{id}', [supplierController::class, 'deleteSuppli
 Route::get('/products/dashboard', [productController::class, 'index'])->name('products.index');
 Route::get('/products/create', [productController::class,'createProduct'])->name('products.create');
 Route::post('/products/create', [productController::class,'createProductPost'])->name('createProductPost');
+Route::get('/product/view/{id}', [productController::class, 'viewProduct'])->name('products.view');
+Route::get('/product/edit/{id}', [productController::class, 'editProduct'])->name('products.edit');
+Route::put('/product/edit/{id}', [productController::class, 'editProductPost'])->name('editProductPost');
+Route::delete('/product/delete/{id}', [productController::class, 'deleteProduct'])->name('products.delete');
 
 // Ajax route for storing category data
 Route::post('/category/ajax/store', [productController::class, 'storeAjaxCategory'])

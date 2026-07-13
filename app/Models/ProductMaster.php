@@ -15,8 +15,8 @@ class ProductMaster extends Model
         'product_name',
         'category_id',
         'supplier_id',
-        'product_internal_code',
-        'barcode',
+        // 'product_internal_code',
+        // 'barcode',
         'purchase_price',
         'selling_price',
         'reorder_level',
@@ -35,7 +35,7 @@ class ProductMaster extends Model
 
     public function category()
     {
-        return $this->belongsTo(CategoryMaster::class, 'category_id', 'category_id');
+        return $this->belongsTo(Category::class, 'category_id', 'category_id');
     }
 
     public function supplier()

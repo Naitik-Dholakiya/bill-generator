@@ -4,185 +4,184 @@
 
 @section('content')
 
-<div class="flex h-screen overflow-hidden bg-gray-50 dark:bg-zinc-950">
+    <div class="flex h-screen overflow-hidden bg-gray-50 dark:bg-zinc-950">
 
-    @include('layout.sidebar', ['active' => 'products'])
+        @include('layout.sidebar', ['active' => 'products'])
 
-    <div class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex-1 flex flex-col overflow-hidden">
 
-        @include('layout.navbar', ['title' => 'Products'])
+            @include('layout.navbar', ['title' => 'Products'])
 
-        <main class="flex-1 overflow-y-auto p-6">
+            <main class="flex-1 overflow-y-auto p-6">
 
-            <!-- Header -->
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                <!-- Header -->
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
 
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-                        Product Management
-                    </h1>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+                            Product Management
+                        </h1>
 
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                        Manage all your products from one place.
-                    </p>
-                </div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Manage all your products from one place.
+                        </p>
+                    </div>
 
-                <a href="{{ route('products.create') }}"
-                    class="inline-flex items-center gap-2 px-5 py-3 rounded-xl
+                    <a href="{{ route('products.create') }}"
+                        class="inline-flex items-center gap-2 px-5 py-3 rounded-xl
                     bg-cyan-600 hover:bg-cyan-700
                     text-white font-medium shadow-lg shadow-cyan-500/20">
 
-                    <i class="ti ti-plus"></i>
-                    Add Product
-                </a>
+                        <i class="ti ti-plus"></i>
+                        Add Product
+                    </a>
 
-            </div>
+                </div>
 
-            <!-- Search -->
-            <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-800 p-4 mb-6">
+                <!-- Search -->
+                <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-800 p-4 mb-6">
 
-                <form method="GET">
+                    <form method="GET">
 
-                    <div class="relative">
+                        <div class="relative">
 
-                        <i class="ti ti-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <i class="ti ti-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
 
-                        <input type="text"
-                            name="search"
-                            value="{{ request('search') }}"
-                            placeholder="Search products..."
-                            class="w-full pl-11 pr-4 py-3 rounded-xl
+                            <input type="text" name="search" value="{{ request('search') }}"
+                                placeholder="Search products..."
+                                class="w-full pl-11 pr-4 py-3 rounded-xl
                             bg-gray-50 dark:bg-zinc-800
                             border border-gray-200 dark:border-zinc-700
                             focus:ring-2 focus:ring-cyan-500
                             outline-none">
 
-                    </div>
+                        </div>
 
-                </form>
+                    </form>
 
-            </div>
+                </div>
 
-            <!-- Table -->
-            <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-800 overflow-hidden">
+                <!-- Table -->
+                <div
+                    class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-800 overflow-hidden">
 
-                <div class="overflow-x-auto">
+                    <div class="overflow-x-auto">
 
-                    <table class="w-full">
+                        <table class="w-full">
 
-                        <thead class="bg-gray-50 dark:bg-zinc-800">
+                            <thead class="bg-gray-50 dark:bg-zinc-800">
 
-                            <tr>
+                                <tr>
 
-                                <th class="px-6 py-4 text-left text-sm font-semibold">
-                                    Product Code
-                                </th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold">
+                                        Product Code
+                                    </th>
 
-                                <th class="px-6 py-4 text-left text-sm font-semibold">
-                                    Product Name
-                                </th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold">
+                                        Product Name
+                                    </th>
 
-                                <th class="px-6 py-4 text-left text-sm font-semibold">
-                                    Category
-                                </th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold">
+                                        Category
+                                    </th>
 
-                                <th class="px-6 py-4 text-left text-sm font-semibold">
-                                    Supplier
-                                </th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold">
+                                        Supplier
+                                    </th>
 
-                                <th class="px-6 py-4 text-left text-sm font-semibold">
-                                    Unit Price
-                                </th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold">
+                                        Selling Price
+                                    </th>
 
-                                <th class="px-6 py-4 text-left text-sm font-semibold">
-                                    Stock
-                                </th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold">
+                                        Reorder Level
+                                    </th>
 
-                                <th class="px-6 py-4 text-center text-sm font-semibold">
-                                    Actions
-                                </th>
+                                    <th class="px-6 py-4 text-center text-sm font-semibold">
+                                        Actions
+                                    </th>
 
-                            </tr>
+                                </tr>
 
-                        </thead>
+                            </thead>
 
-                        <tbody class="divide-y divide-gray-200 dark:divide-zinc-800">
+                            <tbody class="divide-y divide-gray-200 dark:divide-zinc-800">
 
-                            @forelse($products as $product)
+                                @forelse($products as $product)
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-zinc-800/50">
 
-                                <tr class="hover:bg-gray-50 dark:hover:bg-zinc-800/50">
+                                        <td class="px-6 py-4">
 
-                                    <td class="px-6 py-4">
+                                            <div class="flex items-center gap-3">
 
-                                        <div class="flex items-center gap-3">
+                                                <div
+                                                    class="w-10 h-10 rounded-full bg-cyan-100 dark:bg-cyan-500/10 flex items-center justify-center">
 
-                                            <div class="w-10 h-10 rounded-full bg-cyan-100 dark:bg-cyan-500/10 flex items-center justify-center">
+                                                    <i class="ti ti-package text-cyan-600"></i>
 
-                                                <i class="ti ti-package text-cyan-600"></i>
+                                                </div>
+
+                                                <div>
+
+                                                    <p class="font-medium text-gray-900 dark:text-white">
+                                                        {{ $product->product_code }}
+                                                    </p>
+
+                                                </div>
 
                                             </div>
 
-                                            <div>
+                                        </td>
 
-                                                <p class="font-medium text-gray-900 dark:text-white">
-                                                    {{ $product->product_code }}
-                                                </p>
+                                        <td class="px-6 py-4">
+                                            {{ $product->product_name }}
+                                        </td>
 
-                                            </div>
+                                        <td class="px-6 py-4">
+                                            {{ $product->category->category_name ?? '-' }}
+                                        </td>
 
-                                        </div>
+                                        <td class="px-6 py-4">
+                                            {{ $product->supplier->supplier_name ?? '-' }}
+                                        </td>
 
-                                    </td>
+                                        <td class="px-6 py-4">
+                                            ₹{{ number_format($product->selling_price, 2) }}
+                                        </td>
 
-                                    <td class="px-6 py-4">
-                                        {{ $product->product_name }}
-                                    </td>
+                                        <td class="px-6 py-4">
+                                            @if ($product->reorder_level == 0)
+                                                <span
+                                                    class="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                                                    Out of Stock ({{ $product->reorder_level }})
+                                                </span>
+                                            @elseif($product->reorder_level <= 10)
+                                                <span
+                                                    class="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
+                                                    Low Stock ({{ $product->reorder_level }})
+                                                </span>
+                                            @else
+                                                <span
+                                                    class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                                                    In Stock ({{ $product->reorder_level }})
+                                                </span>
+                                            @endif
+                                        </td>
 
-                                    <td class="px-6 py-4">
-                                        {{ $product->category->category_name ?? '-' }}
-                                    </td>
+                                        <td class="px-6 py-4">
 
-                                    <td class="px-6 py-4">
-                                        {{ $product->supplier->supplier_name ?? '-' }}
-                                    </td>
+                                            <div class="flex items-center justify-center gap-2">
 
-                                    <td class="px-6 py-4">
-                                        ₹{{ number_format($product->unit_price, 2) }}
-                                    </td>
+                                                <!-- View -->
+                                                <a href="{{ route('products.view', $product->product_id) }}"
+                                                    class="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center">
 
-                                    <td class="px-6 py-4">
+                                                    <i class="ti ti-eye"></i>
 
-                                        @if($product->stock_quantity > 10)
-                                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                                                {{ $product->stock_quantity }}
-                                            </span>
-                                        @elseif($product->stock_quantity > 0)
-                                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
-                                                {{ $product->stock_quantity }}
-                                            </span>
-                                        @else
-                                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-                                                Out of Stock
-                                            </span>
-                                        @endif
+                                                </a>
 
-                                    </td>
-
-                                    <td class="px-6 py-4">
-
-                                        <div class="flex items-center justify-center gap-2">
-
-                                            <!-- View -->
-                                            {{-- {{ route('product.view', $product->product_id) }} --}}
-                                            <a href="#"
-                                                class="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center">
-
-                                                <i class="ti ti-eye"></i>
-
-                                            </a>
-
-                                            <!-- Edit -->
-                                            {{--
+                                                <!-- Edit -->
+                                                {{--
                                             <a href="{{ route('editProduct', $product->product_id) }}"
                                                 class="w-9 h-9 rounded-lg bg-amber-100 text-amber-600 hover:bg-amber-200 flex items-center justify-center">
 
@@ -191,8 +190,8 @@
                                             </a>
                                             --}}
 
-                                            <!-- Delete -->
-                                            {{--
+                                                <!-- Delete -->
+                                                {{--
                                             <form action="{{ route('deleteProduct', $product->product_id) }}"
                                                 method="POST"
                                                 onsubmit="return confirm('Delete this product?')">
@@ -210,59 +209,59 @@
                                             </form>
                                             --}}
 
-                                        </div>
+                                            </div>
 
-                                    </td>
+                                        </td>
 
-                                </tr>
+                                    </tr>
 
-                            @empty
+                                @empty
 
-                                <tr>
+                                    <tr>
 
-                                    <td colspan="7" class="py-16 text-center">
+                                        <td colspan="7" class="py-16 text-center">
 
-                                        <div class="flex flex-col items-center">
+                                            <div class="flex flex-col items-center">
 
-                                            <div class="w-20 h-20 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
+                                                <div
+                                                    class="w-20 h-20 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
 
-                                                <i class="ti ti-package text-4xl text-gray-400"></i>
+                                                    <i class="ti ti-package text-4xl text-gray-400"></i>
+
+                                                </div>
+
+                                                <h3 class="text-lg font-semibold">
+                                                    No Products Found
+                                                </h3>
+
+                                                <p class="text-gray-500 mt-1">
+                                                    Start by creating your first product.
+                                                </p>
 
                                             </div>
 
-                                            <h3 class="text-lg font-semibold">
-                                                No Products Found
-                                            </h3>
+                                        </td>
 
-                                            <p class="text-gray-500 mt-1">
-                                                Start by creating your first product.
-                                            </p>
+                                    </tr>
+                                @endforelse
 
-                                        </div>
+                            </tbody>
 
-                                    </td>
+                        </table>
 
-                                </tr>
-
-                            @endforelse
-
-                        </tbody>
-
-                    </table>
+                    </div>
 
                 </div>
 
-            </div>
+                <!-- Pagination -->
+                <div class="mt-6">
+                    {{-- {{ $products->links() }} --}}
+                </div>
 
-            <!-- Pagination -->
-            <div class="mt-6">
-                {{-- {{ $products->links() }} --}}
-            </div>
+            </main>
 
-        </main>
+        </div>
 
     </div>
-
-</div>
 
 @endsection

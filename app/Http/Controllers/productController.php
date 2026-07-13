@@ -6,12 +6,13 @@ use App\Models\Category;
 use App\Models\ProductMaster;
 use App\Models\SupplierMaster;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class productController extends Controller
 {
     public function index()
     {
-        $products = ProductMaster::with(['category', 'products', 'creator', 'updater'])->get();
+        $products = ProductMaster::all();
         $categories = Category::all();
         $productss = ProductMaster::all();
 
@@ -31,16 +32,13 @@ class productController extends Controller
             'category_name' => $request->category_name,
             'description' => $request->description,
             'status' => '1',
-            'created_by' => $userId, 
+            'created_by' => $userId,
         ]);
 
-        return response()->with([
+        return response()->json([
             'success' => true,
-            'message' => 'Category added successfully.',
-            'category' => [
-                'category_id' => $category->category_id,
-                'category_name' => $category->category_name,
-            ],
+            'message' => 'Category Added Successfully',
+            'category' => $category,
         ]);
     }
 
@@ -69,5 +67,157 @@ class productController extends Controller
         $suppliers = SupplierMaster::orderBy('supplier_name')->get();
 
         return view('products.productCreate', compact('categories', 'suppliers', 'productCode'));
+    }
+
+    public function createProductPost(Request $request)
+    {
+        try {
+            $validatedData = $request->validate([
+                'lf_product_code' => 'required|unique:productmaster,product_code|max:20',
+                'tb_product_name' => 'required|max:100',
+                'dd_supplier' => 'required|exists:suppliermaster,supplier_id',
+                'dd_category' => 'required|exists:categorymaster,category_id',
+                'tb_purchase_price' => 'required|numeric|min:0',
+                'tb_selling_price' => 'required|numeric|min:0',
+                'tb_reorder_level' => 'required|numeric|min:0',
+            ], [
+                'tb_product_name.required' => 'Product name is required.',
+                'dd_supplier.required' => 'Supplier is required.',
+                'dd_category.required' => 'Category is required.',
+                'tb_purchase_price.required' => 'Purchase price is required.',
+                'tb_selling_price.required' => 'Selling price is required.',
+                'tb_reorder_level.required' => 'Reorder level is required.',
+            ], [
+                'lf_product_code' => 'Product Code',
+                'tb_product_name' => 'Product Name',
+                'dd_supplier' => 'Supplier',
+                'dd_category' => 'Category',
+                'tb_purchase_price' => 'Purchase Price',
+                'tb_selling_price' => 'Selling Price',
+                'tb_reorder_level' => 'Reorder Level',
+            ]);
+
+            $userId = request()->cookies->get('GTA');
+
+            DB::beginTransaction();
+            ProductMaster::create([
+                'product_code' => $validatedData['lf_product_code'],
+                'product_name' => $validatedData['tb_product_name'],
+                'supplier_id' => $validatedData['dd_supplier'],
+                'category_id' => $validatedData['dd_category'],
+                'purchase_price' => $validatedData['tb_purchase_price'],
+                'selling_price' => $validatedData['tb_selling_price'],
+                'reorder_level' => $validatedData['tb_reorder_level'],
+                'created_by' => $userId,
+                'created_at' => now(),
+            ]);
+            // die('here');
+            DB::commit();
+            return redirect()->route('products.index')->with('success', 'Product created successfully.');
+        } catch (ValidationException $e) {
+            DB::rollback();
+            return redirect()->back()->withErrors($e->validator)->withInput();
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'An error occurred while creating the product. Please try again.')->withInput();
+        }
+    }
+
+    public function viewProduct($id)
+    {
+        $product = ProductMaster::findOrFail($id);
+        return view('products.productView', compact('product'));
+    }
+
+    public function editProduct($id)
+    {
+        $product = ProductMaster::findOrFail($id);
+        $categories = Category::orderBy('category_name')->get();
+        $suppliers = SupplierMaster::orderBy('supplier_name')->get();
+
+        return view('products.productEdit', compact('product', 'categories', 'suppliers'));
+    }
+
+    public function editProductPost(Request $request, $id)
+    {
+        try {
+            $validatedData = $request->validate([
+                'lf_product_code' => 'required|max:20|unique:productmaster,product_code,' . $id . ',product_id',
+                'tb_product_name' => 'required|max:100',
+                'dd_supplier' => 'required|exists:suppliermaster,supplier_id',
+                'dd_category' => 'required|exists:categorymaster,category_id',
+                'tb_purchase_price' => 'required|numeric|min:0',
+                'tb_selling_price' => 'required|numeric|min:0',
+                'tb_reorder_level' => 'required|numeric|min:0',
+                'tb_status' => 'required|in:0,1',
+            ], [
+                'tb_product_name.required' => 'Product name is required.',
+                'dd_supplier.required' => 'Supplier is required.',
+                'dd_category.required' => 'Category is required.',
+                'tb_purchase_price.required' => 'Purchase price is required.',
+                'tb_selling_price.required' => 'Selling price is required.',
+                'tb_reorder_level.required' => 'Reorder level is required.',
+                'tb_status.required' => 'Status is required.',
+            ], [
+                'lf_product_code' => 'Product Code',
+                'tb_product_name' => 'Product Name',
+                'dd_supplier' => 'Supplier',
+                'dd_category' => 'Category',
+                'tb_purchase_price' => 'Purchase Price',
+                'tb_selling_price' => 'Selling Price',
+                'tb_reorder_level' => 'Reorder Level',
+                'tb_status' => 'Status',
+            ]);
+
+            $userId = request()->cookies->get('GTA');
+            $product = ProductMaster::findOrFail($id);
+
+            DB::beginTransaction();
+            $product->update([
+                'product_code' => $validatedData['lf_product_code'],
+                'product_name' => $validatedData['tb_product_name'],
+                'supplier_id' => $validatedData['dd_supplier'],
+                'category_id' => $validatedData['dd_category'],
+                'purchase_price' => $validatedData['tb_purchase_price'],
+                'selling_price' => $validatedData['tb_selling_price'],
+                'reorder_level' => $validatedData['tb_reorder_level'],
+                'status' => $validatedData['tb_status'],
+                'updated_by' => $userId,
+                'updated_at' => now(),
+            ]);
+            // die('here');
+            DB::commit();
+            return redirect()->route('products.index')->with('success', 'Product updated successfully.');
+        } catch (ValidationException $e) {
+            DB::rollback();
+            return redirect()->back()->withErrors($e->validator)->withInput();
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'An error occurred while updating the product. Please try again.')->withInput();
+        }
+    }
+
+    public function deleteProduct($id)
+    {
+        try {
+            $product = ProductMaster::findOrFail($id);
+            
+            DB::beginTransaction();
+
+            DB::table('productmaster')
+                ->where('product_id', $id)
+                ->update([
+                    'status' => 0,
+                    'updated_by' => request()->cookies->get('GTA'),
+                    'updated_at' => now(),
+                    'deleted_at' => now(),
+                ]);
+
+            DB::commit();
+            return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->route('products.index')->with('error', 'An error occurred while deleting the product. Please try again.');
+        }
     }
 }
