@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\usermaster;
 
 class ProductMaster extends Model
 {
@@ -45,11 +46,11 @@ class ProductMaster extends Model
 
     public function creator()
     {
-        return $this->belongsTo(Usermaster::class, 'created_by', 'user_id');
+        return $this->belongsTo(usermaster::class, 'created_by', 'user_id');
     }
 
     public function updater()
     {
-        return $this->belongsTo(Usermaster::class, 'updated_by', 'user_id');
+        return $this->belongsTo(usermaster::class, 'updated_by', 'user_id');
     }
 }
