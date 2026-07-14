@@ -204,12 +204,10 @@ class productController extends Controller
             
             DB::beginTransaction();
 
-            DB::table('productmaster')
-                ->where('product_id', $id)
+            ProductMaster::where('product_id', $id)
                 ->update([
-                    'status' => 0,
-                    'updated_by' => request()->cookies->get('GTA'),
-                    'updated_at' => now(),
+                    'status' => '0',
+                    'updated_by' => request()->cookie('GTA'),
                     'deleted_at' => now(),
                 ]);
 

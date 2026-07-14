@@ -95,7 +95,7 @@
                                     Category <span class="text-red-500">*</span>
                                 </label>
 
-                                <select name="tb_category"
+                                <select name="dd_category"
                                     class="w-full px-4 py-3 rounded-xl
                                     bg-white dark:bg-zinc-800
                                     border border-gray-200 dark:border-zinc-700
@@ -106,7 +106,7 @@
                                     @foreach($categories as $category)
 
                                         <option value="{{ $category->category_id }}"
-                                            {{ old('tb_category',$product->category_id)==$category->category_id ? 'selected' : '' }}>
+                                            {{ old('dd_category',$product->category_id)==$category->category_id ? 'selected' : '' }}>
 
                                             {{ $category->category_name }}
 
@@ -116,7 +116,7 @@
 
                                 </select>
 
-                                @error('tb_category')
+                                @error('dd_category')
                                     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror
 
@@ -129,7 +129,7 @@
                                     Supplier <span class="text-red-500">*</span>
                                 </label>
 
-                                <select name="tb_supplier"
+                                <select name="dd_supplier"
                                     class="w-full px-4 py-3 rounded-xl
                                     bg-white dark:bg-zinc-800
                                     border border-gray-200 dark:border-zinc-700
@@ -140,7 +140,7 @@
                                     @foreach($suppliers as $supplier)
 
                                         <option value="{{ $supplier->supplier_id }}"
-                                            {{ old('tb_supplier',$product->supplier_id)==$supplier->supplier_id ? 'selected' : '' }}>
+                                            {{ old('dd_supplier',$product->supplier_id)==$supplier->supplier_id ? 'selected' : '' }}>
 
                                             {{ $supplier->supplier_name }}
 
@@ -150,7 +150,7 @@
 
                                 </select>
 
-                                @error('tb_supplier')
+                                @error('dd_supplier')
                                     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror
 
