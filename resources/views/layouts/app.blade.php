@@ -66,13 +66,13 @@
     @endif
 
     {{-- Error Messages --}}
-    @if($errors->any())
+    @if(session('error'))
         <script>
             Swal.fire({
                 toast: true,
                 position: 'top',
                 icon: 'error',
-                title: '{{ $errors->first() }}',
+                title: '{{ session('error') }}',
                 showConfirmButton: false,
                 timer: 3500,
                 timerProgressBar: true,

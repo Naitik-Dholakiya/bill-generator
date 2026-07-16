@@ -114,12 +114,12 @@ class productController extends Controller
             // die('here');
             DB::commit();
             return redirect()->route('products.index')->with('success', 'Product created successfully.');
-        } catch (ValidationException $e) {
-            DB::rollback();
-            return redirect()->back()->withErrors($e->validator)->withInput();
+        // } catch (ValidationException $e) {
+        //     DB::rollback();
+        //     return redirect()->back()->withErrors($e->validator)->withInput();
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'An error occurred while creating the product. Please try again.')->withInput();
+            return redirect()->back()->with('error', $e->getMessage())->withInput();
         }
     }
 
@@ -188,12 +188,12 @@ class productController extends Controller
             // die('here');
             DB::commit();
             return redirect()->route('products.index')->with('success', 'Product updated successfully.');
-        } catch (ValidationException $e) {
-            DB::rollback();
-            return redirect()->back()->withErrors($e->validator)->withInput();
+        // } catch (ValidationException $e) {
+        //     DB::rollback();
+        //     return redirect()->back()->withErrors($e->validator)->withInput();
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'An error occurred while updating the product. Please try again.')->withInput();
+            return redirect()->back()->with('error', $e->getMessage())->withInput();
         }
     }
 
@@ -215,7 +215,7 @@ class productController extends Controller
             return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->route('products.index')->with('error', 'An error occurred while deleting the product. Please try again.');
+            return redirect()->route('products.index')->with('error', $e->getMessage());
         }
     }
 }
