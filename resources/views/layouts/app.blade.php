@@ -11,12 +11,14 @@
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: { extend: {} }
+            theme: {
+                extend: {}
+            }
         }
     </script>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-    
+
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
@@ -37,6 +39,7 @@
                 stroke 250ms ease,
                 box-shadow 250ms ease;
         }
+
         .swal2-timer-progress-bar {
             background: #accf9c !important;
         }
@@ -48,7 +51,7 @@
 <body class="h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-gray-100 overflow-hidden">
 
     @yield('content')
-    @if(session('success'))
+    @if (session('success'))
         <script>
             Swal.fire({
                 toast: true,
@@ -66,24 +69,30 @@
     @endif
 
     {{-- Error Messages --}}
-    @if(session('error'))
+    @if (session('error'))
         <script>
-            Swal.fire({
-                toast: true,
-                position: 'top',
-                icon: 'error',
-                title: '{{ session('error') }}',
-                showConfirmButton: false,
-                timer: 3500,
-                timerProgressBar: true,
-                background: 'rgba(17,24,39,0.85)',
-                color: '#fff'
+            const errors = @json(session('error'));
+
+            errors.forEach((error, index) => {
+                setTimeout(() => {
+                    Swal.fire({
+                        toast: true,
+                        position: 'top',
+                        icon: 'error',
+                        title: error,
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true,
+                        background: 'rgba(17,24,39,0.85)',
+                        color: '#fff'
+                    });
+                }, index * 1000); // Show next after previous finishes
             });
         </script>
     @endif
 
     {{-- Warning Message --}}
-    @if(session('warning'))
+    @if (session('warning'))
         <script>
             Swal.fire({
                 toast: true,
@@ -99,7 +108,7 @@
         </script>
     @endif
     {{-- Info Message --}}
-    @if(session('info'))
+    @if (session('info'))
         <script>
             Swal.fire({
                 toast: true,
@@ -154,13 +163,13 @@
         }
 
         // Close on outside click
-        document.addEventListener('click', function (e) {
+        document.addEventListener('click', function(e) {
             const wrapper = document.getElementById('themeWrapper');
             if (wrapper && !wrapper.contains(e.target)) closeThemeMenu();
         });
 
         // Close on Escape
-        document.addEventListener('keydown', function (e) {
+        document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') closeThemeMenu();
         });
 
@@ -184,13 +193,13 @@
             el.classList.add('active', 'bg-gray-100', 'dark:bg-zinc-800',
                 'text-gray-900', 'dark:text-white', 'font-medium');
             const title = document.getElementById('pageTitle');
-            if (title) title.textContent = el.querySelector('span')?.textContent.trim()
-                ?? el.textContent.trim();
+            if (title) title.textContent = el.querySelector('span')?.textContent.trim() ??
+                el.textContent.trim();
         }
 
         // ── Init on DOM ready ──────────────────────────────────────────────────────
 
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             const saved = localStorage.getItem('theme') || 'system';
             setTheme(saved);
         });

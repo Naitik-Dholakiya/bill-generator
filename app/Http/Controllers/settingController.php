@@ -34,11 +34,8 @@ class settingController extends Controller
             return redirect()->back()->with('success','Password Changed Successfully');
         } catch (\Exception $e) {
             return back()
-                ->withErrors([
-                    'error' =>
-                    // => $e->getMessage() ?: 'Something went wrong. Please try again later.',
-                    'Something went wrong. Please try again later.',
-                ]);
+                ->with('error', 'Something went wrong. Please try again.')
+                ->withInput();
         }
     }
 }

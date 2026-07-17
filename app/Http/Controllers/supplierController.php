@@ -45,7 +45,7 @@ class supplierController extends Controller
     public function createSupplierPost(Request $request)
     {
         try {
-            $validatedData = $request->validate([
+            $validator = Validator::make($request->all(), [
                 'lf_supplier_code' => 'required|unique:suppliermaster,supplier_code|max:20',
                 'tb_supplierName' => 'required|max:100',
                 'tb_email' => 'nullable|email|max:100|unique:suppliermaster,email',

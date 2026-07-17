@@ -7,6 +7,8 @@ use App\Models\ProductMaster;
 use App\Models\SupplierMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class productController extends Controller
 {
@@ -71,23 +73,26 @@ class productController extends Controller
 
     public function createProductPost(Request $request)
     {
-        try {
-            $validatedData = $request->validate([
-                'lf_product_code' => 'required|unique:productmaster,product_code|max:20',
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'lf_product_code' => 'required|max:20|unique:productmaster,product_code',
                 'tb_product_name' => 'required|max:100',
                 'dd_supplier' => 'required|exists:suppliermaster,supplier_id',
                 'dd_category' => 'required|exists:categorymaster,category_id',
                 'tb_purchase_price' => 'required|numeric|min:0',
                 'tb_selling_price' => 'required|numeric|min:0',
                 'tb_reorder_level' => 'required|numeric|min:0',
-            ], [
+            ],
+            [
                 'tb_product_name.required' => 'Product name is required.',
                 'dd_supplier.required' => 'Supplier is required.',
                 'dd_category.required' => 'Category is required.',
                 'tb_purchase_price.required' => 'Purchase price is required.',
                 'tb_selling_price.required' => 'Selling price is required.',
                 'tb_reorder_level.required' => 'Reorder level is required.',
-            ], [
+            ],
+            [
                 'lf_product_code' => 'Product Code',
                 'tb_product_name' => 'Product Name',
                 'dd_supplier' => 'Supplier',
@@ -95,31 +100,49 @@ class productController extends Controller
                 'tb_purchase_price' => 'Purchase Price',
                 'tb_selling_price' => 'Selling Price',
                 'tb_reorder_level' => 'Reorder Level',
-            ]);
+            ]
+        );
+        
+        // Check validation FIRST
+        if ($validator->fails()) {
+            return redirect()
+                ->back()
+                ->with('error', $validator->errors()->all())
+                ->withInput();
+        }
+
+        try {
+            DB::beginTransaction();
 
             $userId = request()->cookies->get('GTA');
+            $validated = $validator->validated();
 
-            DB::beginTransaction();
             ProductMaster::create([
-                'product_code' => $validatedData['lf_product_code'],
-                'product_name' => $validatedData['tb_product_name'],
-                'supplier_id' => $validatedData['dd_supplier'],
-                'category_id' => $validatedData['dd_category'],
-                'purchase_price' => $validatedData['tb_purchase_price'],
-                'selling_price' => $validatedData['tb_selling_price'],
-                'reorder_level' => $validatedData['tb_reorder_level'],
+                'product_code' => $validated['lf_product_code'],
+                'product_name' => $validated['tb_product_name'],
+                'supplier_id' => $validated['dd_supplier'],
+                'category_id' => $validated['dd_category'],
+                'purchase_price' => $validated['tb_purchase_price'],
+                'selling_price' => $validated['tb_selling_price'],
+                'reorder_level' => $validated['tb_reorder_level'],
                 'created_by' => $userId,
                 'created_at' => now(),
             ]);
-            // die('here');
+
             DB::commit();
-            return redirect()->route('products.index')->with('success', 'Product created successfully.');
-        // } catch (ValidationException $e) {
-        //     DB::rollback();
-        //     return redirect()->back()->withErrors($e->validator)->withInput();
+
+            return redirect()
+                ->route('products.index')
+                ->with('success', 'Product created successfully.');
         } catch (\Exception $e) {
-            DB::rollback();
-            return redirect()->back()->with('error', $e->getMessage())->withInput();
+            DB::rollBack();
+
+            Log::error('Error creating product: '.$e->getMessage());
+
+            return redirect()
+                ->back()
+                ->with('Warning', 'Something went wrong. Please try again.')
+                ->withInput();
         }
     }
 
@@ -141,8 +164,8 @@ class productController extends Controller
     public function editProductPost(Request $request, $id)
     {
         try {
-            $validatedData = $request->validate([
-                'lf_product_code' => 'required|max:20|unique:productmaster,product_code,' . $id . ',product_id',
+            $validator = Validator::make($request->all(), [
+                'lf_product_code' => 'required|max:20|unique:productmaster,product_code,'.$id.',product_id',
                 'tb_product_name' => 'required|max:100',
                 'dd_supplier' => 'required|exists:suppliermaster,supplier_id',
                 'dd_category' => 'required|exists:categorymaster,category_id',
@@ -171,6 +194,7 @@ class productController extends Controller
 
             $userId = request()->cookies->get('GTA');
             $product = ProductMaster::findOrFail($id);
+            $validatedData = $validator->validated();
 
             DB::beginTransaction();
             $product->update([
@@ -185,15 +209,17 @@ class productController extends Controller
                 'updated_by' => $userId,
                 'updated_at' => now(),
             ]);
-            // die('here');
+            if ($validator->fails()) {
+                return redirect()->back()->with('error', $validator->errors())->withInput();
+            }
             DB::commit();
+
             return redirect()->route('products.index')->with('success', 'Product updated successfully.');
-        // } catch (ValidationException $e) {
-        //     DB::rollback();
-        //     return redirect()->back()->withErrors($e->validator)->withInput();
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', $e->getMessage())->withInput();
+            Log::error('Error updating product: '.$e->getMessage());
+
+            return redirect()->back()->with('error', 'Something went wrong.Please Try Again.')->withInput();
         }
     }
 
@@ -201,7 +227,7 @@ class productController extends Controller
     {
         try {
             $product = ProductMaster::findOrFail($id);
-            
+
             DB::beginTransaction();
 
             ProductMaster::where('product_id', $id)
@@ -212,9 +238,11 @@ class productController extends Controller
                 ]);
 
             DB::commit();
+
             return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
         } catch (\Exception $e) {
             DB::rollback();
+            Log::error('Error deleting product: '.$e->getMessage());
             return redirect()->route('products.index')->with('error', $e->getMessage());
         }
     }
