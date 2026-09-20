@@ -71,7 +71,8 @@
     {{-- Error Messages --}}
     @if (session('error'))
         <script>
-            const errors = @json(session('error'));
+            const errorSession = @json(session('error'));
+            const errors = Array.isArray(errorSession) ? errorSession : [errorSession];
 
             errors.forEach((error, index) => {
                 setTimeout(() => {
@@ -86,7 +87,7 @@
                         background: 'rgba(17,24,39,0.85)',
                         color: '#fff'
                     });
-                }, index * 1000); // Show next after previous finishes
+                }, index * 1000);
             });
         </script>
     @endif

@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 use App\Models\SupplierMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 
 class supplierController extends Controller
 {
@@ -71,7 +74,7 @@ class supplierController extends Controller
             ]);
 
             $userId = request()->cookies->get('GTA');
-            $validatedData['created_by'] = $userId;
+            $validatedData = $validator->validate();
 
             DB::beginTransaction();
             SupplierMaster::create([
@@ -87,12 +90,15 @@ class supplierController extends Controller
 
             DB::commit();
             return redirect()->route('suppliers.index')->with('success', 'Supplier created successfully.');
-        } catch (ValidationException $e) {
-            DB::rollback();
-            return redirect()->back()->withErrors($e->validator)->withInput();
         } catch (\Exception $e) {
-            DB::rollback();
-            return redirect()->back()->with('error', 'An error occurred while creating the supplier. Please try again.')->withInput();
+            DB::rollBack();
+
+            Log::error('Error creating supplier: '.$e->getMessage());
+
+            return redirect()
+                ->back()
+                ->with('error', 'Something went wrong. Please try again.')
+                ->withInput();
         }
     }
 

@@ -61,10 +61,7 @@
             <span>Products</span>
         </a>
 
-        <p class="px-3 pt-5 pb-1 text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-            Finance</p>
-        {{-- {{ route('invoices.index') }} --}}
-        <a href="#"
+        <a href="{{ route('invoice.index') }}"
             class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-300
                    hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors mb-0.5
                    {{ request()->routeIs('invoices.*') ? 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-white font-medium' : '' }}">
@@ -77,6 +74,8 @@
                 </span>
             @endif
         </a>
+        <p class="px-3 pt-5 pb-1 text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+            Finance</p>
         {{-- {{ route('payments.index') }} --}}
         <a href="#"
             class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-300

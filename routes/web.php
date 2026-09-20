@@ -14,6 +14,7 @@ use App\Http\Controllers\settingController;
 use App\Http\Controllers\customerController;
 use App\Http\Controllers\supplierController;
 use App\Http\Controllers\productController;
+use App\Http\Controllers\invoiceController;
 
 Route::get("/secret/add-dummy-user", [AuthController::class, 'addDummyUser']);
 Route::get('/secret/check-user', [AuthController::class, 'check']);
@@ -64,3 +65,18 @@ Route::delete('/product/delete/{id}', [productController::class, 'deleteProduct'
 // Ajax route for storing category data
 Route::post('/category/ajax/store', [productController::class, 'storeAjaxCategory'])
     ->name('category.store.ajax');
+
+Route::get('/invoice/dashboard', [InvoiceController::class, 'index'])
+        ->name('invoice.index');
+
+    // Create invoice page
+    Route::get('/invoice/create', [InvoiceController::class, 'create'])
+        ->name('invoice.create');
+
+    // Save invoice + generate PDF
+    Route::post('/invoice/generate-pdf', [InvoiceController::class, 'generatePdf'])
+        ->name('invoice.generatePdf');
+
+    // View invoice PDF
+    Route::get('/invoice/{invoice_id}/pdf', [InvoiceController::class, 'pdf'])
+        ->name('invoice.pdf');

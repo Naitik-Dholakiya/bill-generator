@@ -576,43 +576,163 @@ Stores discount information.
 
 # BILLING / INVOICE MANAGEMENT
 
-## invoices
+## Invoice Master Table
 
-Stores invoice master records.
+Stores invoice master/header records used for billing and sales transactions.
 
-| Column          | Type                             | Constraints                 |
-| --------------- | -------------------------------- | --------------------------- |
-| invoice_id      | INT                              | PK, AUTO_INCREMENT          |
-| invoice_number  | VARCHAR(50)                      | UNIQUE, NOT NULL            |
-| customer_id     | INT                              | FK -> customers.customer_id |
-| user_id         | INT                              | FK -> users.user_id         |
-| invoice_date    | DATE                             | NOT NULL                    |
-| subtotal        | DECIMAL(12,2)                    | NOT NULL                    |
-| total_tax       | DECIMAL(12,2)                    | DEFAULT 0                   |
-| discount_amount | DECIMAL(12,2)                    | DEFAULT 0                   |
-| grand_total     | DECIMAL(12,2)                    | NOT NULL                    |
-| payment_status  | ENUM('pending','partial','paid') | DEFAULT 'pending'           |
-| notes           | TEXT                             | NULL                        |
-| created_at      | TIMESTAMP                        | DEFAULT CURRENT_TIMESTAMP   |
+| Column Name | Data Type | Nullable | Default | Description |
+| :--- | :--- | :---: | :---: | :--- |
+| invoice_id | BIGINT UNSIGNED | No | Auto Increment | Primary Key |
+| invoice_number | VARCHAR(50) | No | - | Unique Invoice Number |
+| customer_id | BIGINT UNSIGNED | No | - | Customer Reference |
+| user_id | BIGINT UNSIGNED | No | - | User Who Created the Invoice |
+| invoice_date | DATE | No | - | Invoice Date |
+| subtotal | DECIMAL(12,2) | No | 0.00 | Total Before Tax and Discount |
+| total_tax | DECIMAL(12,2) | No | 0.00 | Total Tax Amount |
+| discount_amount | DECIMAL(12,2) | No | 0.00 | Total Discount Amount |
+| grand_total | DECIMAL(12,2) | No | 0.00 | Final Invoice Amount |
+| payment_status | ENUM('pending','partial','paid') | No | 'pending' | Payment Status |
+| notes | TEXT | Yes | NULL | Additional Invoice Notes |
+| created_at | TIMESTAMP | Yes | CURRENT_TIMESTAMP | Invoice Creation Timestamp |
+| updated_at | TIMESTAMP | Yes | NULL | Last Update Timestamp |
+| deleted_at | TIMESTAMP | Yes | NULL | Soft Delete Timestamp |
 
----
+### Primary Key
 
-## invoice_items
+- `invoice_id`
 
-Stores products inside invoices.
+### Invoice Number
 
-| Column          | Type          | Constraints               |
-| --------------- | ------------- | ------------------------- |
-| invoice_item_id | INT           | PK, AUTO_INCREMENT        |
-| invoice_id      | INT           | FK -> invoices.invoice_id |
-| product_id      | INT           | FK -> products.product_id |
-| quantity        | INT           | NOT NULL                  |
-| unit_price      | DECIMAL(10,2) | NOT NULL                  |
-| tax_amount      | DECIMAL(10,2) | DEFAULT 0                 |
-| discount_amount | DECIMAL(10,2) | DEFAULT 0                 |
-| total_amount    | DECIMAL(12,2) | NOT NULL                  |
+Unique invoice number generated for every invoice.
 
----
+Format:
+
+```text
+INV(Year)(user_id)(Sequence)```
+
+-- =========================================================
+-- INVOICE MASTER TABLE
+-- =========================================================
+
+CREATE TABLE `invoices` (
+    `invoice_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `invoice_number` VARCHAR(50) NOT NULL,
+    `customer_id` BIGINT UNSIGNED NOT NULL,
+    `user_id` BIGINT UNSIGNED NOT NULL,
+    `invoice_date` DATE NOT NULL,
+
+    `subtotal` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    `total_tax` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    `discount_amount` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    `grand_total` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+
+    `payment_status` ENUM('pending','partial','paid')
+        NOT NULL DEFAULT 'pending',
+
+    `notes` TEXT NULL,
+
+    `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    `deleted_at` TIMESTAMP NULL DEFAULT NULL,
+
+    PRIMARY KEY (`invoice_id`),
+
+    UNIQUE KEY `uk_invoice_number` (`invoice_number`),
+
+    KEY `idx_customer_id` (`customer_id`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_invoice_date` (`invoice_date`),
+    KEY `idx_payment_status` (`payment_status`),
+
+    CONSTRAINT `fk_invoices_customer`
+        FOREIGN KEY (`customer_id`)
+        REFERENCES `customermaster` (`customer_id`),
+
+    CONSTRAINT `fk_invoices_user`
+        FOREIGN KEY (`user_id`)
+        REFERENCES `usermaster` (`user_id`)
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+
+-- =========================================================
+-- INVOICE ITEM TABLE
+-- =========================================================
+
+CREATE TABLE `invoice_items` (
+    `invoice_item_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `invoice_id` BIGINT UNSIGNED NOT NULL,
+    `product_id` BIGINT UNSIGNED NOT NULL,
+
+    `quantity` INT UNSIGNED NOT NULL DEFAULT 1,
+    `unit_price` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `tax_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `discount_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `total_amount` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+
+    `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    `deleted_at` TIMESTAMP NULL DEFAULT NULL,
+
+    PRIMARY KEY (`invoice_item_id`),
+
+    KEY `idx_invoice_id` (`invoice_id`),
+    KEY `idx_product_id` (`product_id`),
+    KEY `idx_invoice_product` (`invoice_id`, `product_id`),
+
+    CONSTRAINT `fk_invoice_items_invoice`
+        FOREIGN KEY (`invoice_id`)
+        REFERENCES `invoices` (`invoice_id`)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+
+    CONSTRAINT `fk_invoice_items_product`
+        FOREIGN KEY (`product_id`)
+        REFERENCES `productmaster` (`product_id`)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+### Invoice Item Table
+
+Stores individual products/items included in an invoice.
+
+| Column Name       | Data Type          | Nullable | Default | Description                         |
+| :---------------- | :----------------- | :------: | :------ | :---------------------------------- |
+| invoice_item_id   | BIGINT UNSIGNED    | No       | Auto Increment | Primary Key                  |
+| invoice_id        | BIGINT UNSIGNED    | No       | -       | Invoice Reference                  |
+| product_id        | BIGINT UNSIGNED    | No       | -       | Product Reference                  |
+| quantity          | INT UNSIGNED       | No       | 1       | Quantity of Product                |
+| unit_price        | DECIMAL(10,2)      | No       | 0.00    | Selling Price Per Unit             |
+| tax_amount        | DECIMAL(10,2)      | No       | 0.00    | Tax Amount for the Item            |
+| discount_amount   | DECIMAL(10,2)      | No       | 0.00    | Discount Applied to the Item      |
+| total_amount      | DECIMAL(12,2)      | No       | 0.00    | Final Amount for the Item         |
+| created_at        | TIMESTAMP          | Yes      | NULL    | Record Creation Timestamp          |
+| updated_at        | TIMESTAMP          | Yes      | NULL    | Last Update Timestamp              |
+| deleted_at        | TIMESTAMP          | Yes      | NULL    | Soft Delete Timestamp              |
+
+## Notes
+
+### Primary Key
+
+- `invoice_item_id`
+
+### Relationships
+
+| Column | References |
+| :--- | :--- |
+| `invoice_id` | `invoices.invoice_id` |
+| `product_id` | `productmaster.product_id` |
+
+### Amount Calculation
+
+```text
+Item Subtotal = quantity × unit_price
+
+Total Amount = Item Subtotal + tax_amount - discount_amount
 
 # PAYMENT MANAGEMENT
 
