@@ -397,18 +397,12 @@
 
                                 <a href="{{ route('invoice.index') }}"
                                     class="px-5 py-2.5 rounded-xl border border-gray-300 dark:border-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800">
-
                                     Cancel
-
                                 </a>
-
                                 <button type="submit"
                                     class="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-medium">
-
                                     <i class="ti ti-file-type-pdf mr-1"></i>
-
-                                    Generate Invoice PDF
-
+                                    Create Invoice
                                 </button>
 
                             </div>

@@ -16,6 +16,7 @@ use App\Http\Controllers\supplierController;
 use App\Http\Controllers\productController;
 use App\Http\Controllers\invoiceController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\invoiceGeneratorController;
 
 Route::get("/secret/add-dummy-user", [AuthController::class, 'addDummyUser']);
 Route::get('/secret/check-user', [AuthController::class, 'check']);
@@ -79,7 +80,7 @@ Route::get('/invoice/dashboard', [InvoiceController::class, 'index'])
         ->name('invoice.generatePdf');
 
     // View invoice PDF
-    Route::get('/invoice/{invoice_id}/pdf', [InvoiceController::class, 'pdf'])
+    Route::get('/invoices/{invoice}/pdf', [InvoiceGeneratorController::class, 'generate'])
         ->name('invoice.pdf');
 
 // Open Deploy.php file in the root directory and run the following command to deploy the application

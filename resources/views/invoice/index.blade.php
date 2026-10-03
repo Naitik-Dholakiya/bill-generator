@@ -28,53 +28,10 @@
 
                     <a href="{{ route('invoice.create') }}"
                         class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-medium transition">
-
                         <i class="ti ti-plus mr-2"></i>
-
                         Create Invoice
-
                     </a>
-
                 </div>
-
-
-                <!-- Success Message -->
-                @if (session('success'))
-                    <div
-                        class="mb-6 p-4 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400">
-
-                        <div class="flex items-center gap-2">
-
-                            <i class="ti ti-circle-check text-lg"></i>
-
-                            <span>
-                                {{ session('success') }}
-                            </span>
-
-                        </div>
-
-                    </div>
-                @endif
-
-
-                <!-- Error Message -->
-                @if (session('error'))
-                    <div
-                        class="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-400">
-
-                        <div class="flex items-center gap-2">
-
-                            <i class="ti ti-alert-circle text-lg"></i>
-
-                            <span>
-                                {{ session('error') }}
-                            </span>
-
-                        </div>
-
-                    </div>
-                @endif
-
 
                 <!-- Invoice Table -->
                 <div
