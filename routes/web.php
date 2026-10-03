@@ -15,6 +15,7 @@ use App\Http\Controllers\customerController;
 use App\Http\Controllers\supplierController;
 use App\Http\Controllers\productController;
 use App\Http\Controllers\invoiceController;
+use App\Http\Controllers\DashboardController;
 
 Route::get("/secret/add-dummy-user", [AuthController::class, 'addDummyUser']);
 Route::get('/secret/check-user', [AuthController::class, 'check']);
@@ -25,7 +26,7 @@ Route::post('/register', [AuthController::class, 'register'])->name('register');
 Route::get('/', [AuthController::class, 'showLogin']);
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
-Route::get('/dashboard', [AuthController::class, 'dashboard'])->name('dashboard')   ;
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
@@ -39,7 +40,7 @@ Route::get('/customer/view/{id}', [CustomerController::class, 'viewCustomer'])->
 
 Route::get('/customer/edit/{id}', [CustomerController::class, 'editCustomer'])->name('editCustomer');
 
-Route::put('/customer/edit/{id}', [CustomerController::class, 'editCustomerPost'])->name('editCustomerPost');
+Route::post('/customer/edit/{id}', [CustomerController::class, 'editCustomerPost'])->name('editCustomerPost');
 
 Route::delete('/customer/delete/{id}', [CustomerController::class, 'deleteCustomer'])->name('deleteCustomer');
 
@@ -80,3 +81,9 @@ Route::get('/invoice/dashboard', [InvoiceController::class, 'index'])
     // View invoice PDF
     Route::get('/invoice/{invoice_id}/pdf', [InvoiceController::class, 'pdf'])
         ->name('invoice.pdf');
+
+// Open Deploy.php file in the root directory and run the following command to deploy the application
+Route::get('/deploy', function () {
+    $output = shell_exec('php deploy.php');
+    return response()->json(['output' => $output]);
+});

@@ -18,11 +18,17 @@
        stock number. Add a `stock_quantity` column or a stock-ledger table to
        get real low-stock alerts.
 
+    NO-DATA CONVENTION — read this before wiring the controller:
+    A key that is *missing entirely* from $kpis renders "No data" (metric not
+    wired up yet). A key that is present with value 0 renders "0" / "₹0"
+    (metric is wired, and the real answer is zero). Always pass 0 explicitly
+    once a query is live, even if the result is empty — don't omit the key.
+
     CONTROLLER CONTRACT — pass these from DashboardController@index:
 
     $kpis = [
         'revenue_total'       => // SUM(grand_total) this month
-        'revenue_growth'      => // % vs last month
+        'revenue_growth'      => // % vs last month (nullable — omit if not computed)
         'outstanding_total'   => // SUM(grand_total) where payment_status in (pending,partial)
         'outstanding_count'   => // COUNT(*) same filter
         'aged_pending_total'  => // SUM(grand_total) where payment_status != paid AND invoice_date <= now()-30d
@@ -31,23 +37,51 @@
         'customers_total'     => // COUNT(customermaster)
         'customers_new'       => // COUNT this month
         'products_total'      => // COUNT(productmaster where status=1)
+        'categories_total'    => // COUNT(categorymaster)
         'reorder_watch_count' => // COUNT(productmaster where reorder_level > 0)
         'suppliers_active'    => // COUNT(suppliermaster where status=1)
+        'invoices_total'      => // COUNT(invoicemaster) — used for the onboarding checklist
         'avg_invoice_value'   => // AVG(grand_total)
+        'collected_total'     => // SUM(grand_total) where payment_status = paid, this month
     ];
     $revenueTrend      = ['labels' => [...7 or 30 dates...], 'values' => [...grand_total sums...]];
-    $invoiceStatus     = ['paid' => 0, 'partial' => 0, 'pending' => 0]; // counts or totals
+    $invoiceStatus     = ['paid' => 0, 'partial' => 0, 'pending' => 0]; // counts
     $topCustomers      = collection of {customer_name, customer_code, total_spent, invoice_count, gst_number}
     $topProducts       = collection of {product_name, category_name, qty_sold, revenue}
     $categorySales     = collection of {category_name, revenue, percent}
     $reorderWatch      = collection of {product_name, product_code, reorder_level, supplier_name}
-    $recentInvoices    = collection of {invoice_id, invoice_number, customer_name, invoice_date, grand_total, payment_status}
+    $recentInvoices    = collection of {invoice_id, invoice_number, customer_name, invoice_date, total_tax, discount_amount, grand_total, payment_status}
     $supplierSnapshot  = collection of {supplier_name, product_count, status}
     ============================================================================
 --}}
 @extends('layouts.app')
 
 @section('content')
+
+@php
+    // Null-safe formatters. A missing key => null => "No data" in the markup.
+    // A present key (even 0) is formatted and shown as a real value.
+    $money = fn ($v) => is_null($v) ? null : '₹' . number_format($v);
+    $num   = fn ($v) => is_null($v) ? null : number_format($v);
+    $pct   = fn ($v) => is_null($v) ? null : number_format($v, 1) . '%';
+
+    $custCount  = $kpis['customers_total']     ?? null;
+    $suppCount  = $kpis['suppliers_active']    ?? null;
+    $prodCount  = $kpis['products_total']      ?? null;
+    $invCount   = $kpis['invoices_total']       ?? null;
+
+    // Fresh-install checklist only shows while the business genuinely has
+    // nothing recorded yet — not just while a query is unwired (null).
+    $isFreshInstall = collect([$custCount, $suppCount, $prodCount, $invCount])
+        ->every(fn ($v) => $v === 0);
+
+    $collectedTotal = $kpis['collected_total'] ?? null;
+    $revenueTotalRaw = $kpis['revenue_total'] ?? null;
+    $collectionRate = (!is_null($collectedTotal) && !is_null($revenueTotalRaw) && $revenueTotalRaw > 0)
+        ? round($collectedTotal / $revenueTotalRaw * 100, 1)
+        : null;
+@endphp
+
 <div class="flex h-screen overflow-hidden bg-gray-50 dark:bg-zinc-950">
 
     @include('layout.sidebar')
@@ -58,9 +92,9 @@
 
         <main class="flex-1 overflow-y-auto p-5 space-y-5">
 
-            {{-- ============================== Welcome / range ============================== --}}
+            {{-- ============================== Welcome / range / quick actions ============================== --}}
             <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-6
-                        flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-xl font-medium">
                         Welcome back,
@@ -69,11 +103,13 @@
                         </span>
                     </h2>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Business snapshot for {{ now()->format('d M Y') }} · {{ $kpis['customers_total'] ?? 1 }} customers,
-                        {{ $kpis['products_total'] ?? 1 }} active products
+                        Business snapshot for {{ now()->format('d M Y') }} ·
+                        {{ $num($custCount) ?? '0' }} customers ·
+                        {{ $num($prodCount) ?? '0' }} active products ·
+                        {{ $num($suppCount) ?? '0' }} suppliers
                     </p>
                 </div>
-                <div class="flex items-center gap-2 flex-shrink-0">
+                <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
                     <select class="text-xs bg-gray-100 dark:bg-zinc-800 border-0 rounded-xl px-3 py-2.5
                                    text-gray-600 dark:text-gray-300 outline-none cursor-pointer" aria-label="Range">
                         <option>This month</option>
@@ -85,6 +121,21 @@
                                    rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
                         <i class="ti ti-download text-base" aria-hidden="true"></i> Export
                     </button>
+                    <a href="{{ route('createCustomer') }}"
+                       class="inline-flex items-center gap-2 px-3.5 py-2 text-sm border border-gray-200 dark:border-zinc-700
+                              rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                        <i class="ti ti-user-plus text-base" aria-hidden="true"></i> Customer
+                    </a>
+                    <a href="{{ route('createSupplier') }}"
+                       class="inline-flex items-center gap-2 px-3.5 py-2 text-sm border border-gray-200 dark:border-zinc-700
+                              rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                        <i class="ti ti-truck-delivery text-base" aria-hidden="true"></i> Supplier
+                    </a>
+                    <a href="{{ route('products.create') }}"
+                       class="inline-flex items-center gap-2 px-3.5 py-2 text-sm border border-gray-200 dark:border-zinc-700
+                              rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                        <i class="ti ti-package text-base" aria-hidden="true"></i> Product
+                    </a>
                     <a href="{{ route('invoice.create') }}"
                        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-xl
                               bg-gradient-to-r from-cyan-500 to-purple-600 hover:opacity-90 transition-opacity">
@@ -92,6 +143,65 @@
                     </a>
                 </div>
             </div>
+
+            {{-- ============================== Onboarding checklist (fresh install only) ============================== --}}
+            @if($isFreshInstall)
+                <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-6">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="font-medium text-base">Set up your business</h3>
+                        <span class="text-xs text-gray-400">0 of 4 done</span>
+                    </div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                        Nothing is recorded yet. Add these four things and every chart below fills in with your real numbers.
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <a href="{{ route('createCustomer') }}"
+                           class="flex items-start gap-3 p-4 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700
+                                  hover:border-cyan-400 dark:hover:border-cyan-500 transition-colors">
+                            <span class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
+                                <i class="ti ti-users text-sm text-purple-600 dark:text-purple-400" aria-hidden="true"></i>
+                            </span>
+                            <div>
+                                <p class="text-sm font-medium">Add a customer</p>
+                                <p class="text-xs text-gray-400 mt-0.5">Who you'll bill</p>
+                            </div>
+                        </a>
+                        <a href="{{ route('createSupplier') }}"
+                           class="flex items-start gap-3 p-4 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700
+                                  hover:border-cyan-400 dark:hover:border-cyan-500 transition-colors">
+                            <span class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+                                <i class="ti ti-truck-delivery text-sm text-emerald-600 dark:text-emerald-400" aria-hidden="true"></i>
+                            </span>
+                            <div>
+                                <p class="text-sm font-medium">Add a supplier</p>
+                                <p class="text-xs text-gray-400 mt-0.5">Who you buy stock from</p>
+                            </div>
+                        </a>
+                        <a href="{{ route('products.create') }}"
+                           class="flex items-start gap-3 p-4 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700
+                                  hover:border-cyan-400 dark:hover:border-cyan-500 transition-colors">
+                            <span class="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center flex-shrink-0">
+                                <i class="ti ti-package text-sm text-cyan-600 dark:text-cyan-400" aria-hidden="true"></i>
+                            </span>
+                            <div>
+                                <p class="text-sm font-medium">Add a product</p>
+                                <p class="text-xs text-gray-400 mt-0.5">What you sell</p>
+                            </div>
+                        </a>
+                        <a href="{{ route('invoice.create') }}"
+                           class="flex items-start gap-3 p-4 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700
+                                  hover:border-cyan-400 dark:hover:border-cyan-500 transition-colors">
+                            <span class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                                <i class="ti ti-file-invoice text-sm text-amber-600 dark:text-amber-400" aria-hidden="true"></i>
+                            </span>
+                            <div>
+                                <p class="text-sm font-medium">Create an invoice</p>
+                                <p class="text-xs text-gray-400 mt-0.5">Start billing</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            @endif
 
             {{-- ============================== KPI grid ============================== --}}
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -104,12 +214,21 @@
                             <i class="ti ti-currency-rupee text-sm text-emerald-600 dark:text-emerald-400" aria-hidden="true"></i>
                         </span>
                     </div>
-                    <p class="text-2xl font-medium">₹{{ number_format($kpis['revenue_total'] ?? 262346) }}</p>
-                    <p class="text-xs mt-2 flex items-center gap-1
-                              {{ ($kpis['revenue_growth'] ?? 12.4) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }}">
-                        <i class="ti ti-trending-up text-sm" aria-hidden="true"></i>
-                        {{ $kpis['revenue_growth'] ?? 12.4 }}% <span class="text-gray-400">vs last month</span>
-                    </p>
+                    @if(is_null($money($kpis['revenue_total'] ?? null)))
+                        <p class="text-2xl font-medium text-gray-300 dark:text-zinc-700">No data</p>
+                        <p class="text-xs text-gray-400 mt-2">Create an invoice to start tracking revenue</p>
+                    @else
+                        <p class="text-2xl font-medium">{{ $money($kpis['revenue_total']) }}</p>
+                        <p class="text-xs mt-2 flex items-center gap-1
+                                  {{ ($kpis['revenue_growth'] ?? 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }}">
+                            @if(!is_null($kpis['revenue_growth'] ?? null))
+                                <i class="ti ti-trending-up text-sm" aria-hidden="true"></i>
+                                {{ $pct($kpis['revenue_growth']) }} <span class="text-gray-400">vs last month</span>
+                            @else
+                                <span class="text-gray-400">vs last month: no data</span>
+                            @endif
+                        </p>
+                    @endif
                 </div>
 
                 {{-- Outstanding (pending + partial) --}}
@@ -120,10 +239,15 @@
                             <i class="ti ti-clock-dollar text-sm text-amber-600 dark:text-amber-400" aria-hidden="true"></i>
                         </span>
                     </div>
-                    <p class="text-2xl font-medium">₹{{ number_format($kpis['outstanding_total'] ?? 231123) }}</p>
-                    <p class="text-xs text-gray-400 mt-2">
-                        across {{ $kpis['outstanding_count'] ?? 1 }} unpaid invoice{{ ($kpis['outstanding_count'] ?? 1) == 1 ? '' : 's' }}
-                    </p>
+                    @if(is_null($money($kpis['outstanding_total'] ?? null)))
+                        <p class="text-2xl font-medium text-gray-300 dark:text-zinc-700">No data</p>
+                        <p class="text-xs text-gray-400 mt-2">No unpaid invoices tracked yet</p>
+                    @else
+                        <p class="text-2xl font-medium">{{ $money($kpis['outstanding_total']) }}</p>
+                        <p class="text-xs text-gray-400 mt-2">
+                            across {{ $num($kpis['outstanding_count'] ?? 0) }} unpaid invoice{{ ($kpis['outstanding_count'] ?? 0) == 1 ? '' : 's' }}
+                        </p>
+                    @endif
                 </div>
 
                 {{-- Aged / at-risk (proxy for overdue — see note at top) --}}
@@ -134,10 +258,15 @@
                             <i class="ti ti-alert-triangle text-sm text-red-600 dark:text-red-400" aria-hidden="true"></i>
                         </span>
                     </div>
-                    <p class="text-2xl font-medium">₹{{ number_format($kpis['aged_pending_total'] ?? 0) }}</p>
-                    <p class="text-xs text-gray-400 mt-2">
-                        {{ $kpis['aged_pending_count'] ?? 0 }} invoice{{ ($kpis['aged_pending_count'] ?? 0) == 1 ? '' : 's' }} aging past 30 days
-                    </p>
+                    @if(is_null($money($kpis['aged_pending_total'] ?? null)))
+                        <p class="text-2xl font-medium text-gray-300 dark:text-zinc-700">No data</p>
+                        <p class="text-xs text-gray-400 mt-2">Proxy metric — no due_date column yet</p>
+                    @else
+                        <p class="text-2xl font-medium">{{ $money($kpis['aged_pending_total']) }}</p>
+                        <p class="text-xs text-gray-400 mt-2">
+                            {{ $num($kpis['aged_pending_count'] ?? 0) }} invoice{{ ($kpis['aged_pending_count'] ?? 0) == 1 ? '' : 's' }} aging past 30 days
+                        </p>
+                    @endif
                 </div>
 
                 {{-- GST collected --}}
@@ -148,8 +277,13 @@
                             <i class="ti ti-receipt-tax text-sm text-cyan-600 dark:text-cyan-400" aria-hidden="true"></i>
                         </span>
                     </div>
-                    <p class="text-2xl font-medium">₹{{ number_format($kpis['gst_collected'] ?? 100) }}</p>
-                    <p class="text-xs text-gray-400 mt-2">this month, from total_tax on invoices</p>
+                    @if(is_null($money($kpis['gst_collected'] ?? null)))
+                        <p class="text-2xl font-medium text-gray-300 dark:text-zinc-700">No data</p>
+                        <p class="text-xs text-gray-400 mt-2">No taxed invoices yet</p>
+                    @else
+                        <p class="text-2xl font-medium">{{ $money($kpis['gst_collected']) }}</p>
+                        <p class="text-xs text-gray-400 mt-2">this month, from total_tax on invoices</p>
+                    @endif
                 </div>
 
                 {{-- Customers --}}
@@ -160,10 +294,15 @@
                             <i class="ti ti-users text-sm text-purple-600 dark:text-purple-400" aria-hidden="true"></i>
                         </span>
                     </div>
-                    <p class="text-2xl font-medium">{{ number_format($kpis['customers_total'] ?? 1) }}</p>
-                    <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
-                        +{{ $kpis['customers_new'] ?? 1 }} new this month
-                    </p>
+                    @if(is_null($num($custCount)))
+                        <p class="text-2xl font-medium text-gray-300 dark:text-zinc-700">No data</p>
+                        <p class="text-xs mt-2"><a href="{{ route('createCustomer') }}" class="text-cyan-600 dark:text-cyan-400 hover:underline">Add your first customer →</a></p>
+                    @else
+                        <p class="text-2xl font-medium">{{ $num($custCount) }}</p>
+                        <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
+                            +{{ $num($kpis['customers_new'] ?? 0) }} new this month
+                        </p>
+                    @endif
                 </div>
 
                 {{-- Products --}}
@@ -174,8 +313,13 @@
                             <i class="ti ti-package text-sm text-cyan-600 dark:text-cyan-400" aria-hidden="true"></i>
                         </span>
                     </div>
-                    <p class="text-2xl font-medium">{{ number_format($kpis['products_total'] ?? 1) }}</p>
-                    <p class="text-xs text-gray-400 mt-2">across {{ $kpis['categories_total'] ?? 1 }} categories</p>
+                    @if(is_null($num($prodCount)))
+                        <p class="text-2xl font-medium text-gray-300 dark:text-zinc-700">No data</p>
+                        <p class="text-xs mt-2"><a href="{{ route('products.create') }}" class="text-cyan-600 dark:text-cyan-400 hover:underline">Add your first product →</a></p>
+                    @else
+                        <p class="text-2xl font-medium">{{ $num($prodCount) }}</p>
+                        <p class="text-xs text-gray-400 mt-2">across {{ $num($kpis['categories_total'] ?? null) ?? 'no' }} categories</p>
+                    @endif
                 </div>
 
                 {{-- Reorder watch (proxy for low stock — see note at top) --}}
@@ -186,8 +330,13 @@
                             <i class="ti ti-alert-circle text-sm text-amber-600 dark:text-amber-400" aria-hidden="true"></i>
                         </span>
                     </div>
-                    <p class="text-2xl font-medium">{{ number_format($kpis['reorder_watch_count'] ?? 1) }}</p>
-                    <p class="text-xs text-gray-400 mt-2">products with a reorder level set</p>
+                    @if(is_null($num($kpis['reorder_watch_count'] ?? null)))
+                        <p class="text-2xl font-medium text-gray-300 dark:text-zinc-700">No data</p>
+                        <p class="text-xs text-gray-400 mt-2">Set a reorder level on a product to track this</p>
+                    @else
+                        <p class="text-2xl font-medium">{{ $num($kpis['reorder_watch_count']) }}</p>
+                        <p class="text-xs text-gray-400 mt-2">products with a reorder level set</p>
+                    @endif
                 </div>
 
                 {{-- Suppliers --}}
@@ -198,8 +347,15 @@
                             <i class="ti ti-truck-delivery text-sm text-emerald-600 dark:text-emerald-400" aria-hidden="true"></i>
                         </span>
                     </div>
-                    <p class="text-2xl font-medium">{{ number_format($kpis['suppliers_active'] ?? 3) }}</p>
-                    <p class="text-xs text-gray-400 mt-2">avg invoice ₹{{ number_format($kpis['avg_invoice_value'] ?? 131173) }}</p>
+                    @if(is_null($num($suppCount)))
+                        <p class="text-2xl font-medium text-gray-300 dark:text-zinc-700">No data</p>
+                        <p class="text-xs mt-2"><a href="{{ route('createSupplier') }}" class="text-cyan-600 dark:text-cyan-400 hover:underline">Add your first supplier →</a></p>
+                    @else
+                        <p class="text-2xl font-medium">{{ $num($suppCount) }}</p>
+                        <p class="text-xs text-gray-400 mt-2">
+                            avg invoice {{ $money($kpis['avg_invoice_value'] ?? null) ?? 'no data' }}
+                        </p>
+                    @endif
                 </div>
 
             </div>
@@ -218,35 +374,51 @@
                             <option>This year</option>
                         </select>
                     </div>
-                    <div class="h-56">
+                    <div class="h-56 relative">
                         <canvas id="revenueChart"></canvas>
+                        <div id="revenueEmptyState"
+                             class="hidden absolute inset-0 flex flex-col items-center justify-center text-center gap-1">
+                            <i class="ti ti-chart-line text-2xl text-gray-300 dark:text-zinc-700" aria-hidden="true"></i>
+                            <p class="text-sm text-gray-400">No invoices in this period yet</p>
+                        </div>
                     </div>
                 </div>
 
                 {{-- Invoice status breakdown --}}
                 <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-5">
                     <h3 class="font-medium text-sm mb-5">Invoice status</h3>
-                    <div class="h-40 flex items-center justify-center">
-                        <canvas id="statusChart"></canvas>
-                    </div>
+                    @if(empty($invoiceStatus) || (($invoiceStatus['paid'] ?? 0) + ($invoiceStatus['partial'] ?? 0) + ($invoiceStatus['pending'] ?? 0)) === 0)
+                        <div class="h-40 flex flex-col items-center justify-center text-center gap-1">
+                            <i class="ti ti-file-invoice text-2xl text-gray-300 dark:text-zinc-700" aria-hidden="true"></i>
+                            <p class="text-sm text-gray-400">No invoices yet</p>
+                        </div>
+                    @else
+                        <div class="h-40 flex items-center justify-center">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    @endif
                     <div class="space-y-2.5 mt-5">
                         <div class="flex items-center justify-between text-xs">
                             <span class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Paid
                             </span>
-                            <span class="font-medium">{{ $invoiceStatus['paid'] ?? 0 }}</span>
+                            <span class="font-medium">{{ $num($invoiceStatus['paid'] ?? 0) }}</span>
                         </div>
                         <div class="flex items-center justify-between text-xs">
                             <span class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                                 <span class="w-2 h-2 rounded-full bg-cyan-500"></span> Partial
                             </span>
-                            <span class="font-medium">{{ $invoiceStatus['partial'] ?? 0 }}</span>
+                            <span class="font-medium">{{ $num($invoiceStatus['partial'] ?? 0) }}</span>
                         </div>
                         <div class="flex items-center justify-between text-xs">
                             <span class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                                 <span class="w-2 h-2 rounded-full bg-amber-500"></span> Pending
                             </span>
-                            <span class="font-medium">{{ $invoiceStatus['pending'] ?? 2 }}</span>
+                            <span class="font-medium">{{ $num($invoiceStatus['pending'] ?? 0) }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs pt-2 mt-1 border-t border-gray-50 dark:border-zinc-800">
+                            <span class="text-gray-500 dark:text-gray-400">Collection rate</span>
+                            <span class="font-medium">{{ !is_null($collectionRate) ? $collectionRate.'%' : 'No data' }}</span>
                         </div>
                     </div>
                 </div>
@@ -263,9 +435,7 @@
                         <a href="{{ route('customers.index') }}" class="text-xs text-cyan-600 dark:text-cyan-400 hover:underline">View all</a>
                     </div>
                     <div class="divide-y divide-gray-50 dark:divide-zinc-800">
-                        @forelse($topCustomers ?? [
-                            (object)['customer_name' => 'Naitik Dholakiya', 'customer_code' => 'CUS010001', 'total_spent' => 262346, 'invoice_count' => 2, 'gst_number' => 'GST5612315213'],
-                        ] as $c)
+                        @forelse ($topCustomers as $c)
                             <div class="flex items-center gap-3 px-5 py-3">
                                 <div class="w-9 h-9 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 flex items-center justify-center
                                             text-white text-xs font-medium flex-shrink-0">
@@ -278,7 +448,14 @@
                                 <p class="text-sm font-medium flex-shrink-0">₹{{ number_format($c->total_spent) }}</p>
                             </div>
                         @empty
-                            <p class="px-5 py-6 text-sm text-gray-400 text-center">No customers yet</p>
+                            <div class="px-5 py-8 text-center">
+                                <i class="ti ti-users text-2xl text-gray-300 dark:text-zinc-700" aria-hidden="true"></i>
+                                <p class="text-sm text-gray-400 mt-2">No customers yet</p>
+                                <a href="{{ route('createCustomer') }}"
+                                   class="inline-flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400 hover:underline mt-1">
+                                    Add a customer <i class="ti ti-arrow-right text-xs" aria-hidden="true"></i>
+                                </a>
+                            </div>
                         @endforelse
                     </div>
                 </div>
@@ -290,9 +467,7 @@
                         <a href="{{ route('products.index') }}" class="text-xs text-cyan-600 dark:text-cyan-400 hover:underline">View all</a>
                     </div>
                     <div class="divide-y divide-gray-50 dark:divide-zinc-800">
-                        @forelse($topProducts ?? [
-                            (object)['product_name' => 'Gold Nosepin', 'category_name' => 'Nosepin Gold', 'qty_sold' => 2, 'revenue' => 262346],
-                        ] as $p)
+                        @forelse ($topProducts as $p)
                             <div class="flex items-center gap-3 px-5 py-3">
                                 <span class="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
                                     <i class="ti ti-package text-sm text-purple-600 dark:text-purple-400" aria-hidden="true"></i>
@@ -304,7 +479,14 @@
                                 <p class="text-sm font-medium flex-shrink-0">₹{{ number_format($p->revenue) }}</p>
                             </div>
                         @empty
-                            <p class="px-5 py-6 text-sm text-gray-400 text-center">No products yet</p>
+                            <div class="px-5 py-8 text-center">
+                                <i class="ti ti-package text-2xl text-gray-300 dark:text-zinc-700" aria-hidden="true"></i>
+                                <p class="text-sm text-gray-400 mt-2">No products yet</p>
+                                <a href="{{ route('products.create') }}"
+                                   class="inline-flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400 hover:underline mt-1">
+                                    Add a product <i class="ti ti-arrow-right text-xs" aria-hidden="true"></i>
+                                </a>
+                            </div>
                         @endforelse
                     </div>
                 </div>
@@ -318,9 +500,7 @@
                 <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-5">
                     <h3 class="font-medium text-sm mb-4">Sales by category</h3>
                     <div class="space-y-4">
-                        @forelse($categorySales ?? [
-                            (object)['category_name' => 'Nosepin Gold', 'revenue' => 262346, 'percent' => 100],
-                        ] as $cat)
+                        @forelse ($categorySales as $cat)
                             <div>
                                 <div class="flex items-center justify-between text-xs mb-1.5">
                                     <span class="text-gray-600 dark:text-gray-300">{{ $cat->category_name }}</span>
@@ -332,7 +512,11 @@
                                 </div>
                             </div>
                         @empty
-                            <p class="text-sm text-gray-400 text-center py-6">No category sales yet</p>
+                            <div class="text-center py-8">
+                                <i class="ti ti-chart-donut text-2xl text-gray-300 dark:text-zinc-700" aria-hidden="true"></i>
+                                <p class="text-sm text-gray-400 mt-2">No category sales yet</p>
+                                <p class="text-xs text-gray-400 mt-1">Shows up once an invoice includes a categorized product</p>
+                            </div>
                         @endforelse
                     </div>
                 </div>
@@ -346,9 +530,7 @@
                         </span>
                     </div>
                     <div class="divide-y divide-gray-50 dark:divide-zinc-800">
-                        @forelse($reorderWatch ?? [
-                            (object)['product_name' => 'Gold Nosepin', 'product_code' => 'PROD010001', 'reorder_level' => 56465, 'supplier_name' => 'Naitik'],
-                        ] as $r)
+                        @forelse ($reorderWatch as $r)
                             <div class="flex items-center gap-3 px-5 py-3">
                                 <span class="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
                                     <i class="ti ti-alert-triangle text-sm text-amber-600 dark:text-amber-400" aria-hidden="true"></i>
@@ -360,7 +542,11 @@
                                 <p class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">reorder @ {{ number_format($r->reorder_level) }}</p>
                             </div>
                         @empty
-                            <p class="px-5 py-6 text-sm text-gray-400 text-center">Nothing to watch</p>
+                            <div class="px-5 py-8 text-center">
+                                <i class="ti ti-list-check text-2xl text-gray-300 dark:text-zinc-700" aria-hidden="true"></i>
+                                <p class="text-sm text-gray-400 mt-2">Nothing to watch</p>
+                                <p class="text-xs text-gray-400 mt-1">Set a reorder level on a product to see it here</p>
+                            </div>
                         @endforelse
                     </div>
                 </div>
@@ -401,10 +587,7 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-50 dark:divide-zinc-800">
-                            @forelse($recentInvoices ?? [
-                                (object)['invoice_id' => 1, 'invoice_number' => 'INV202600001', 'customer_name' => 'Naitik Dholakiya', 'invoice_date' => '2026-08-20', 'total_tax' => 0,   'discount_amount' => 0,      'grand_total' => 231123, 'payment_status' => 'pending'],
-                                (object)['invoice_id' => 6, 'invoice_number' => 'INV202600012', 'customer_name' => 'Naitik Dholakiya', 'invoice_date' => '2026-08-21', 'total_tax' => 100, 'discount_amount' => 200000, 'grand_total' => 31223,  'payment_status' => 'pending'],
-                            ] as $inv)
+                            @forelse ($recentInvoices as $inv)
                                 <tr class="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
                                     <td class="px-6 py-3.5 font-medium text-cyan-600 dark:text-cyan-400">{{ $inv->invoice_number }}</td>
                                     <td class="px-6 py-3.5">{{ $inv->customer_name }}</td>
@@ -422,7 +605,7 @@
                                         @endif
                                     </td>
                                     <td class="px-6 py-3.5 text-right">
-                                        <a href="{{ route('invoice.index', $inv->invoice_id) }}"
+                                        <a href="{{ route('invoice.pdf', $inv->invoice_id) }}"
                                            class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
                                             <i class="ti ti-chevron-right" aria-hidden="true"></i>
                                         </a>
@@ -430,7 +613,14 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="px-6 py-10 text-center text-sm text-gray-400">No invoices yet</td>
+                                    <td colspan="8" class="px-6 py-10 text-center">
+                                        <i class="ti ti-file-invoice text-2xl text-gray-300 dark:text-zinc-700" aria-hidden="true"></i>
+                                        <p class="text-sm text-gray-400 mt-2">No invoices yet</p>
+                                        <a href="{{ route('invoice.create') }}"
+                                           class="inline-flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400 hover:underline mt-1">
+                                            Create your first invoice <i class="ti ti-arrow-right text-xs" aria-hidden="true"></i>
+                                        </a>
+                                    </td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -445,11 +635,7 @@
                     <a href="{{ route('suppliers.index') }}" class="text-xs text-cyan-600 dark:text-cyan-400 hover:underline">View all</a>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
-                    @forelse($supplierSnapshot ?? [
-                        (object)['supplier_name' => 'Naitik', 'product_count' => 1, 'status' => '1'],
-                        (object)['supplier_name' => 'Naitik Dholakiya Dev', 'product_count' => 0, 'status' => '1'],
-                        (object)['supplier_name' => 'Shree Swaminarayan Gold', 'product_count' => 0, 'status' => '1'],
-                    ] as $s)
+                    @forelse ($supplierSnapshot as $s)
                         <div class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-zinc-800">
                             <span class="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
                                 <i class="ti ti-truck-delivery text-sm text-emerald-600 dark:text-emerald-400" aria-hidden="true"></i>
@@ -462,7 +648,14 @@
                                   title="{{ $s->status === '1' ? 'Active' : 'Inactive' }}"></span>
                         </div>
                     @empty
-                        <p class="text-sm text-gray-400 text-center py-6 col-span-full">No suppliers yet</p>
+                        <div class="col-span-full text-center py-8">
+                            <i class="ti ti-truck-delivery text-2xl text-gray-300 dark:text-zinc-700" aria-hidden="true"></i>
+                            <p class="text-sm text-gray-400 mt-2">No suppliers yet</p>
+                            <a href="{{ route('createSupplier') }}"
+                               class="inline-flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400 hover:underline mt-1">
+                                Add a supplier <i class="ti ti-arrow-right text-xs" aria-hidden="true"></i>
+                            </a>
+                        </div>
                     @endforelse
                 </div>
             </div>
@@ -499,7 +692,7 @@ function setTheme(theme) {
     }
     localStorage.setItem('theme', theme);
     const icons = { light: 'ti-sun', dark: 'ti-moon', system: 'ti-device-laptop' };
-    icon.className = `ti ${icons[theme]} text-base`;
+    if (icon) icon.className = `ti ${icons[theme]} text-base`;
 }
 
 // Restore theme on load
@@ -514,63 +707,73 @@ document.addEventListener('DOMContentLoaded', function () {
     const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
     const textColor = isDark ? '#9ca3af' : '#6b7280';
 
-    const revenueLabels = {!! json_encode($revenueTrend['labels'] ?? ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']) !!};
-    const revenueValues = {!! json_encode($revenueTrend['values'] ?? [0, 0, 0, 0, 0, 231123, 31223]) !!};
+    const revenueLabels = {!! json_encode($revenueTrend['labels'] ?? []) !!};
+    const revenueValues = {!! json_encode($revenueTrend['values'] ?? []) !!};
+    const hasRevenueData = revenueValues.length > 0 && revenueValues.some(v => Number(v) !== 0);
 
-    new Chart(document.getElementById('revenueChart'), {
-        type: 'line',
-        data: {
-            labels: revenueLabels,
-            datasets: [{
-                label: 'Revenue',
-                data: revenueValues,
-                borderColor: '#06b6d4',
-                backgroundColor: function (ctx) {
-                    const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 220);
-                    g.addColorStop(0, 'rgba(6,182,212,0.25)');
-                    g.addColorStop(1, 'rgba(147,51,234,0.02)');
-                    return g;
-                },
-                fill: true,
-                tension: 0.35,
-                pointRadius: 3,
-                pointBackgroundColor: '#a855f7',
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { grid: { display: false }, ticks: { color: textColor } },
-                y: { grid: { color: gridColor }, ticks: { color: textColor, callback: v => '₹' + v.toLocaleString('en-IN') } }
+    if (hasRevenueData) {
+        new Chart(document.getElementById('revenueChart'), {
+            type: 'line',
+            data: {
+                labels: revenueLabels,
+                datasets: [{
+                    label: 'Revenue',
+                    data: revenueValues,
+                    borderColor: '#06b6d4',
+                    backgroundColor: function (ctx) {
+                        const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 220);
+                        g.addColorStop(0, 'rgba(6,182,212,0.25)');
+                        g.addColorStop(1, 'rgba(147,51,234,0.02)');
+                        return g;
+                    },
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#a855f7',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: textColor } },
+                    y: { grid: { color: gridColor }, ticks: { color: textColor, callback: v => '₹' + v.toLocaleString('en-IN') } }
+                }
             }
-        }
-    });
+        });
+    } else {
+        document.getElementById('revenueChart').classList.add('hidden');
+        const empty = document.getElementById('revenueEmptyState');
+        if (empty) empty.classList.remove('hidden');
+    }
 
-    const statusData = {!! json_encode([
-        $invoiceStatus['paid'] ?? 0,
-        $invoiceStatus['partial'] ?? 0,
-        $invoiceStatus['pending'] ?? 2,
-    ]) !!};
+    const statusData = [
+        {{ $invoiceStatus['paid'] ?? 0 }},
+        {{ $invoiceStatus['partial'] ?? 0 }},
+        {{ $invoiceStatus['pending'] ?? 0 }}
+    ];
+    const hasStatusData = statusData.some(v => v !== 0);
 
-    new Chart(document.getElementById('statusChart'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Paid', 'Partial', 'Pending'],
-            datasets: [{
-                data: statusData,
-                backgroundColor: ['#10b981', '#06b6d4', '#f59e0b'],
-                borderWidth: 0,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '70%',
-            plugins: { legend: { display: false } }
-        }
-    });
+    if (hasStatusData && document.getElementById('statusChart')) {
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Paid', 'Partial', 'Pending'],
+                datasets: [{
+                    data: statusData,
+                    backgroundColor: ['#10b981', '#06b6d4', '#f59e0b'],
+                    borderWidth: 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
 });
 </script>
 @endpush

@@ -6,7 +6,7 @@
 
     <div class="flex h-screen overflow-hidden bg-gray-50 dark:bg-zinc-950">
 
-        ```
+        
         @include('layout.sidebar')
 
         <div class="flex-1 flex flex-col overflow-hidden">
@@ -28,10 +28,10 @@
 
                 </div>
 
-                <form action="{{ route('editCustomerPost', $customer->customer_id) }}" method="PUT">
+                <form action="{{ route('editCustomerPost', $customer->customer_id) }}" method="POST">
 
                     @csrf
-                    @method('PUT')
+                    @method('POST')
 
                     <div
                         class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
@@ -212,7 +212,7 @@
             </main>
 
         </div>
-        ```
+        
 
     </div>
 

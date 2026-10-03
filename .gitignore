@@ -26,3 +26,5 @@ backups.bat
 backup.bat
 Vyapar.zip
 /backup
+env.production
+.zip

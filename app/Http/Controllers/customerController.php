@@ -97,12 +97,12 @@ class customerController extends Controller
                 ->route('customers.index')
                 ->with('success', 'Customer created successfully.');
 
-        } catch (ValidationException $e) {
+        // } catch (ValidationException $e) {
 
-            return redirect()
-                ->back()
-                ->withErrors($e->validator)
-                ->withInput();
+        //     return redirect()
+        //         ->back()
+        //         ->withErrors($e->validator)
+        //         ->withInput();
 
         } catch (\Exception $e) {
 
@@ -179,20 +179,21 @@ class customerController extends Controller
                 ->route('customers.index')
                 ->with('success', 'Customer updated successfully.');
 
-        } catch (ValidationException $e) {
+        // } catch (ValidationException $e) {
 
-            return redirect()
-                ->back()
-                ->withErrors($e->validator)
-                ->withInput();
+        //     return redirect()
+        //         ->back()
+        //         ->withErrors($e->validator)
+        //         ->withInput();
 
         } catch (\Exception $e) {
 
             DB::rollBack();
 
             return redirect()
-                ->back
-                ->with('error', $e->getMessage());
+                ->back()
+                ->with('error', $e->getMessage())
+                ->withInput();
         }
     }
 

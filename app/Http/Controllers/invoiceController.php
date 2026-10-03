@@ -316,8 +316,6 @@ class InvoiceController extends Controller
 
                 'customer_id' => $validated['customer_id'],
 
-                'user_id' => $userId,
-
                 'invoice_date' => $validated['invoice_date'],
 
                 'subtotal' => $subtotal,
@@ -335,6 +333,8 @@ class InvoiceController extends Controller
                 'created_at' => now(),
 
                 'updated_at' => now(),
+
+                'created_by' => $userId,
 
             ]);
 
@@ -388,15 +388,14 @@ class InvoiceController extends Controller
 
                     'discount_amount' => $discountAmount,
 
-                    'total_amount' => round(
-                        $itemTotal,
-                        2
-                    ),
+                    // 'total_amount' => round(
+                    //     $itemTotal,
+                    //     2
+                    // ),
 
                     'created_at' => now(),
 
-                    'updated_at' => now(),
-
+                    // 'created_by' => $userId,
                 ]);
             }
 
