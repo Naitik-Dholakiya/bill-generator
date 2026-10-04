@@ -75,16 +75,17 @@ Route::get('/invoice/dashboard', [InvoiceController::class, 'index'])
     Route::get('/invoice/create', [InvoiceController::class, 'create'])
         ->name('invoice.create');
 
-    // Save invoice + generate PDF
-    Route::post('/invoice/generate-pdf', [InvoiceController::class, 'generatePdf'])
-        ->name('invoice.generatePdf');
+    Route::get('/invoice/{invoice}', [InvoiceController::class, 'view'])
+        ->name('invoice.view');
+    Route::get('/invoice/{invoice}/edit', [InvoiceController::class, 'edit'])
+        ->name('invoice.edit');
+    Route::put('/invoice/{invoice}', [InvoiceController::class, 'update'])
+        ->name('invoice.update');
+    Route::delete('/invoice/{invoice}', [InvoiceController::class, 'delete'])
+        ->name('invoice.delete');
+    Route::post('/invoice/generate-pdf', [InvoiceController::class, 'createInvoicePost'])
+        ->name('invoice.createInvoicePost');
 
     // View invoice PDF
-    Route::get('/invoices/{invoice}/pdf', [InvoiceGeneratorController::class, 'generate'])
+    Route::get('/invoices/pdf/{invoice}', [InvoiceGeneratorController::class, 'generate'])
         ->name('invoice.pdf');
-
-// Open Deploy.php file in the root directory and run the following command to deploy the application
-Route::get('/deploy', function () {
-    $output = shell_exec('php deploy.php');
-    return response()->json(['output' => $output]);
-});

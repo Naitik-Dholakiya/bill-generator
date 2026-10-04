@@ -256,23 +256,10 @@
 
                                             <div class="flex items-center justify-center gap-2">
 
-                                                <!-- PDF -->
-                                                <a href="{{ route('invoice.pdf', $invoice->invoice_id) }}" target="_blank"
-                                                    title="View PDF"
-                                                    class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50 dark:hover:bg-cyan-950/30 transition">
-
-                                                    <i class="ti ti-file-type-pdf text-lg"></i>
-
-                                                </a>
-
-
-                                                <!-- View -->
-                                                <a href="{{ route('invoice.pdf', $invoice->invoice_id) }}" target="_blank"
+                                                <a href="{{ route('invoice.view', $invoice->invoice_id) }}"
                                                     title="View Invoice"
                                                     class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-zinc-800 transition">
-
                                                     <i class="ti ti-eye text-lg"></i>
-
                                                 </a>
 
                                             </div>

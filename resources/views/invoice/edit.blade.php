@@ -1,29 +1,33 @@
 @extends('layouts.app')
 
-@section('title', 'Create Invoice')
+@section('title', 'Edit Invoice')
 
 @section('content')
     <div class="flex h-screen overflow-hidden bg-gray-50 dark:bg-zinc-950">
         @include('layout.sidebar')
 
         <div class="flex-1 flex flex-col overflow-hidden">
-            @include('layout.navbar', ['title' => 'Create Invoice'])
+            @include('layout.navbar', ['title' => 'Edit Invoice'])
 
             <main class="flex-1 overflow-y-auto p-6">
+                @if (session('error'))
+                    <div class="mb-6 rounded-xl bg-red-100 px-4 py-3 text-red-700">{{ session('error') }}</div>
+                @endif
 
                 <!-- Page Header -->
                 <div class="mb-6">
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-                        Create Invoice
+                        Edit Invoice
                     </h1>
 
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Create an invoice and generate the invoice PDF.
+                        Update the invoice details and line items.
                     </p>
                 </div>
 
-                <form action="{{ route('invoice.createInvoicePost') }}" method="POST" id="invoiceForm">
+                <form action="{{ route('invoice.update', $invoice->invoice_id) }}" method="POST" id="invoiceForm">
                     @csrf
+                    @method('PUT')
 
                     <!-- Invoice Information -->
                     <div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden mb-6">
@@ -168,7 +172,7 @@
 
                                     <tbody id="invoiceItems">
 
-                                        @foreach ($formItems as $index => $formItem)
+                                        @foreach ($items as $index => $formItem)
                                         <tr class="invoice-item border-b border-gray-100 dark:border-zinc-800">
 
                                             <!-- Product -->
@@ -403,8 +407,8 @@
                                 </a>
                                 <button type="submit"
                                     class="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-medium">
-                                    <i class="ti ti-file-type-pdf mr-1"></i>
-                                    Create Invoice
+                                    <i class="ti ti-device-floppy mr-1"></i>
+                                    Save Changes
                                 </button>
 
                             </div>
@@ -423,7 +427,7 @@
     <!-- JavaScript -->
     <script>
 
-        let itemIndex = 1;
+        let itemIndex = {{ count($items) }};
 
         function addItem() {
 

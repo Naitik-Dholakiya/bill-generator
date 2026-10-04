@@ -33,9 +33,9 @@ class InvoiceGeneratorController extends Controller
 
         abort_if(!$invoice, 404, 'Invoice not found.');
 
-        // Super Admin can print anything; everyone else only their own invoices.
         abort_unless(
-            $this->isSuperAdmin($user) || (int) $invoice->created_by === (int) $user->user_id,
+            $this->isSuperAdmin($user)
+                || ($user !== null && (int) $invoice->created_by === (int) $user->user_id),
             403
         );
 
