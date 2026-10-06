@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
-class DashboardController extends Controller
+class dashboardController extends Controller
 {
     public function index(Request $request)
     {

@@ -15,7 +15,7 @@ use App\Http\Controllers\customerController;
 use App\Http\Controllers\supplierController;
 use App\Http\Controllers\productController;
 use App\Http\Controllers\invoiceController;
-use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\dashboardController;
 use App\Http\Controllers\invoiceGeneratorController;
 
 Route::get("/secret/add-dummy-user", [AuthController::class, 'addDummyUser']);
@@ -27,7 +27,7 @@ Route::post('/register', [AuthController::class, 'register'])->name('register');
 Route::get('/', [AuthController::class, 'showLogin']);
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
-Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+Route::get('/dashboard', [dashboardController::class, 'index'])->name('dashboard');
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
