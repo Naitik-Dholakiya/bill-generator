@@ -15,6 +15,7 @@ class invoiceController extends Controller
      */
     public function index()
     {
+        $userId = Cookie::get('GTA');
         $invoices = DB::table('invoicemaster')
             ->leftJoin(
                 'customermaster',
@@ -27,6 +28,7 @@ class invoiceController extends Controller
                 'customermaster.customer_name'
             )
             ->whereNull('invoicemaster.deleted_at')
+            ->where('invoicemaster.created_by', $userId)
             ->orderByDesc('invoicemaster.invoice_id')
             ->paginate(15);
 
@@ -63,8 +65,10 @@ class invoiceController extends Controller
 
     public function edit(int $invoiceId)
     {
+        $userId = Cookie::get('GTA');
         $invoice = DB::table('invoicemaster')
             ->where('invoice_id', $invoiceId)
+            ->where('created_by', $userId)
             ->whereNull('deleted_at')
             ->first();
 
@@ -76,7 +80,7 @@ class invoiceController extends Controller
             ->orderBy('it.item_id')
             ->select('it.*', 'p.touch as product_touch')
             ->get();
-        $isJewelryUser = $this->isJewelryUser($invoice->created_by);
+        $isJewelryUser = $this->isJewelryUser($userId);
 
         $customers = DB::table('customermaster')
             ->where(function ($query) use ($invoice) {
@@ -107,15 +111,17 @@ class invoiceController extends Controller
 
     public function view(int $invoiceId)
     {
+        $userId = Cookie::get('GTA');
         $invoice = DB::table('invoicemaster as i')
             ->leftJoin('customermaster as c', 'c.customer_id', '=', 'i.customer_id')
             ->where('i.invoice_id', $invoiceId)
+            ->where('i.created_by', $userId)
             ->whereNull('i.deleted_at')
             ->select('i.*', 'c.customer_name', 'c.phone', 'c.email', 'c.billing_address', 'c.gst_number')
             ->first();
 
         abort_if(!$invoice, 404, 'Invoice not found.');
-        $isJewelryUser = $this->isJewelryUser($invoice->created_by);
+        $isJewelryUser = $this->isJewelryUser($userId);
 
         $items = DB::table('invoice_items as it')
             ->leftJoin('productmaster as p', 'p.product_id', '=', 'it.product_id')
@@ -130,18 +136,21 @@ class invoiceController extends Controller
 
     public function delete(int $invoiceId)
     {
+        $userId = Cookie::get('GTA');
         $invoice = DB::table('invoicemaster')
             ->where('invoice_id', $invoiceId)
+            ->where('created_by', $userId)
             ->whereNull('deleted_at')
             ->first();
 
         abort_if(!$invoice, 404, 'Invoice not found.');
 
-        DB::transaction(function () use ($invoiceId) {
+        DB::transaction(function () use ($invoiceId, $userId) {
             $now = now();
 
             DB::table('invoicemaster')
                 ->where('invoice_id', $invoiceId)
+                ->where('created_by', $userId)
                 ->whereNull('deleted_at')
                 ->update(['deleted_at' => $now, 'updated_at' => $now]);
 
@@ -158,13 +167,15 @@ class invoiceController extends Controller
 
     public function update(Request $request, int $invoiceId)
     {
+        $userId = Cookie::get('GTA');
         $invoice = DB::table('invoicemaster')
             ->where('invoice_id', $invoiceId)
+            ->where('created_by', $userId)
             ->whereNull('deleted_at')
             ->first();
 
         abort_if(!$invoice, 404, 'Invoice not found.');
-        $isJewelryUser = $this->isJewelryUser($invoice->created_by);
+        $isJewelryUser = $this->isJewelryUser($userId);
         $rules = [
             'customer_id' => ['required', 'integer', 'exists:customermaster,customer_id'],
             'invoice_date' => ['required', 'date'],
@@ -180,8 +191,6 @@ class invoiceController extends Controller
             $rules['items.*.touch'] = ['nullable', 'numeric', 'between:0,100', 'decimal:0,3'];
         }
         $validated = $request->validate($rules);
-
-        $userId = Cookie::get('GTA');
 
         DB::transaction(function () use ($validated, $invoiceId, $userId, $isJewelryUser) {
             $subtotal = 0;
@@ -205,6 +214,7 @@ class invoiceController extends Controller
 
             DB::table('invoicemaster')
                 ->where('invoice_id', $invoiceId)
+                ->where('created_by', $userId)
                 ->whereNull('deleted_at')
                 ->update([
                     'customer_id' => $validated['customer_id'],

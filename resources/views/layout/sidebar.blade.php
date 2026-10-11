@@ -1,9 +1,5 @@
 @php
     $sidebarName = request()->cookie('CSGO') ?? 'Admin';
-    $sidebarIsAdmin = \Illuminate\Support\Facades\DB::table('usermaster')
-        ->where('user_id', request()->cookie('GTA'))
-        ->where('is_admin', 'Y')
-        ->exists();
     $sidebarInitials = collect(preg_split('/\s+/', trim($sidebarName)))
         ->filter()
         ->take(2)
@@ -117,15 +113,6 @@
             <i class="ti ti-settings w-5 shrink-0 text-lg" aria-hidden="true"></i>
             <span>Settings</span>
         </a>
-        @if ($sidebarIsAdmin)
-            <a href="{{ route('admin.jewelry-users.index') }}" @if (request()->routeIs('admin.jewelry-users.*')) aria-current="page" @endif
-                class="mb-1 flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors
-                    {{ request()->routeIs('admin.jewelry-users.*') ? 'bg-cyan-50 font-semibold text-cyan-800 dark:bg-cyan-950/50 dark:text-cyan-300' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white' }}">
-                <i class="ti ti-users-group w-5 shrink-0 text-lg" aria-hidden="true"></i>
-                <span>Jewelry accounts</span>
-            </a>
-        @endif
-
         <button type="button" onclick="openLogoutModal(event)"
             class="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-zinc-300 dark:hover:bg-red-950/30 dark:hover:text-red-400">
             <i class="ti ti-logout w-5 shrink-0 text-lg" aria-hidden="true"></i>

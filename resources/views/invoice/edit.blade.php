@@ -194,7 +194,7 @@
                                                     @foreach ($products as $product)
                                                         <option value="{{ $product->product_id }}"
                                                             data-price="{{ $product->selling_price }}"
-                                                            data-touch="{{ $product->touch }}"
+                                                            @if ($isJewelryUser) data-touch="{{ $product->touch }}" @endif
                                                             {{ old("items.$index.product_id", $formItem->product_id ?? '') == $product->product_id ? 'selected' : '' }}>
                                                             {{ $product->product_name }}
                                                         </option>
@@ -473,7 +473,7 @@
                         @foreach ($products as $product)
                             <option value="{{ $product->product_id }}"
                                 data-price="{{ $product->selling_price }}"
-                                data-touch="{{ $product->touch }}">
+                                @if ($isJewelryUser) data-touch="{{ $product->touch }}" @endif>
                                 {{ $product->product_name }}
                             </option>
                         @endforeach

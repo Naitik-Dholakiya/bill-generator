@@ -7,7 +7,6 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class invoiceGeneratorController extends Controller
 {
@@ -33,11 +32,7 @@ class invoiceGeneratorController extends Controller
 
         abort_if(!$invoice, 404, 'Invoice not found.');
 
-        abort_unless(
-            $this->isSuperAdmin($user)
-                || ($user !== null && (int) $invoice->created_by === (int) $user->user_id),
-            403
-        );
+        abort_unless($user !== null && (int) $invoice->created_by === (int) $user->user_id, 403);
 
         // The seller is the user who created the invoice; their template is used.
         $seller = DB::table('usermaster')->where('user_id', $invoice->created_by)->first();
@@ -103,28 +98,6 @@ class invoiceGeneratorController extends Controller
             : $pdf->stream($filename);
     }
 
-    /**
-     * PUT /admin/users/{user}/invoice-template
-     * Super Admin only: choose which invoice template another user gets.
-     */
-    public function updateTemplate(Request $request, int $userId)
-    {
-        abort_unless($this->isSuperAdmin($this->currentUser($request)), 403, 'Only Super Admin can change invoice templates.');
-
-        $validated = $request->validate([
-            'invoice_template' => ['required', 'string', Rule::in(array_keys(config('invoice.templates')))],
-        ]);
-
-        abort_unless(DB::table('usermaster')->where('user_id', $userId)->exists(), 404, 'User not found.');
-
-        DB::table('usermaster')->where('user_id', $userId)->update([
-            'invoice_template' => $validated['invoice_template'],
-            'updated_at'       => now(),
-        ]);
-
-        return back()->with('success', 'Invoice template updated.');
-    }
-
     // ---------------------------------------------------------------------
 
     /**
@@ -145,11 +118,6 @@ class invoiceGeneratorController extends Controller
         return str_contains((string) $id, '@')
             ? $query->where('email', $id)->first()
             : $query->where('user_id', $id)->first();
-    }
-
-    private function isSuperAdmin(?object $user): bool
-    {
-        return $user !== null && $user->is_admin === 'Y';
     }
 
     /** Only whitelisted templates can be rendered; anything else falls back to the default. */

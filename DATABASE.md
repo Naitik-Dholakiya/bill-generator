@@ -787,7 +787,19 @@ Run `php artisan migrate` to add optional jewelry support:
 - `productmaster.touch` stores the product's default touch value.
 - `invoice_items.touch` stores the editable touch value used on that invoice line.
 
-The migration adds columns to existing tables; ensure the documented `invoice_items` table already exists before running it. The touch value is optional, accepts values from `0` to `100` with up to three decimal places, and is displayed without changing invoice prices or totals. The feature is off by default. Administrators can manage it from **Jewelry accounts** in the application sidebar.
+The migration adds columns to existing tables; ensure the documented `invoice_items` table already exists before running it. The touch value is optional, accepts values from `0` to `100` with up to three decimal places, and is displayed without changing invoice prices or totals. Touch is only rendered in product and invoice screens for accounts enabled for jewelry by an administrator; standard user pages omit Touch controls and product Touch values. Administrators can manage access from **User accounts** in the separate admin console.
+
+## Administrator Console
+
+Regular users and administrators sign in through the same page at `/`. After credentials are verified, the account role determines the destination: regular users go to `/dashboard` and administrators go to `/admin`. Admin pages use their own controllers, views, layouts, and routes; requests re-check that the shared login cookie belongs to an active administrator.
+
+To grant the first administrator access, register a regular account and run this command on the server:
+
+```sh
+php artisan admin:promote admin@example.com
+```
+
+The command asks for confirmation and does not set or reveal the account password. Afterward, sign in through the regular login page. Administrators can add accounts, assign roles and account status, enable Jewelry Touch, and select an invoice template from the registered templates in `config/invoice.php`.
 
 ---
 

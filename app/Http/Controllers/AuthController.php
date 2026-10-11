@@ -2,17 +2,9 @@
 
 namespace App\Http\Controllers;
 
-// Import necessary classes
-use App\Exception\CustomException;
-use App\Models\usermaster;
 use Illuminate\Http\Request;
-// Import Cookie
 use Illuminate\Support\Facades\Cookie;
-// Import Models
 use Illuminate\Support\Facades\DB;
-
-// Import Custom Exception
-// Import Custom Helper
 
 class AuthController extends Controller
 {
@@ -24,6 +16,15 @@ class AuthController extends Controller
 
     public function showLogin()
     {
+        $userId = Cookie::get('GTA');
+        $user = $userId
+            ? DB::table('usermaster')->where('user_id', $userId)->where('status', '1')->first(['is_admin'])
+            : null;
+
+        if ($user !== null) {
+            return redirect()->route($user->is_admin === 'Y' ? 'admin.dashboard' : 'dashboard');
+        }
+
         return view('auth.login');
     }
 
@@ -69,6 +70,8 @@ class AuthController extends Controller
     public function logout()
     {
         session()->flush();
+        Cookie::queue(Cookie::forget('GTA'));
+        Cookie::queue(Cookie::forget('CSGO'));
 
         return redirect('/')
             ->with('success', 'Logged out successfully.');
@@ -79,25 +82,16 @@ class AuthController extends Controller
         try {
             $validated = $request->validate([
                 'tb_email' => ['required', 'email', 'max:150'],
-                'tb_password' => ['required', 'max:20'],
+                'tb_password' => ['required', 'string'],
             ], [], [
                 'tb_email' => 'Email',
                 'tb_password' => 'Password',
             ]);
 
-            $user = DB::table('usermaster as um')
-                ->select([
-                    'um.user_id',
-                    'um.full_name',
-                    'um.email',
-                    'um.password',
-                    'um.phone',
-                    'um.is_admin',
-                    'um.status',
-                ])
-                ->where('um.email', $validated['tb_email'])
-                ->where('um.is_admin', 'N')
-                ->where('um.status', '1')
+            $user = DB::table('usermaster')
+                ->select(['user_id', 'full_name', 'email', 'password', 'phone', 'is_admin', 'status'])
+                ->where('email', $validated['tb_email'])
+                ->where('status', '1')
                 ->first();
 
             if (! $user) {
@@ -126,18 +120,9 @@ class AuthController extends Controller
             Cookie::queue('GTA', $user->user_id, 60 * 24 * 30);
             Cookie::queue('CSGO', $user->full_name, 60 * 24 * 30);
 
-            return redirect('/dashboard')
+            return redirect()->route($user->is_admin === 'Y' ? 'admin.dashboard' : 'dashboard')
                 ->with('success', 'Login successful.');
 
-            // } catch (CustomException $e) {
-
-            //     return back()
-            //         ->withErrors([
-            //             'error' => $e->getMessage(),
-            //         ])
-            //         ->withInput();
-            // }catch (\Exception $e) {
-            //     dd($e->getMessage());
         } catch (\Exception $e) {
 
             return back()
@@ -147,35 +132,4 @@ class AuthController extends Controller
         }
     }
 
-    public function addDummyUser()
-    {
-        $user = new usermaster;
-        $user->full_name = 'Naitik Dholakiya';
-        $user->email = 'Naitik@gmail.com';
-        $email = 'Naitik@gmail.com';
-        $password = 'Naitik@123';
-
-        $securePassword = securePassword($password, $email);
-        $user->password = $securePassword;
-        $user->is_admin = 'N';
-        $user->status = '1';
-        $user->save();
-
-        //         dd(
-        //     securePassword('Naitik@123', 'Naitik@gmail.com')
-        // );
-        return response()->json(['message' => 'Dummy user added successfully', 'password' => $user->password]);
-    }
-
-    public function check()
-    {
-        $email = 'Naitik@gmail.com';
-        $password = 'Naitik@123';
-
-        $securePassword = securePassword($password, $email);
-
-        $userPassword = DB::table('usermaster')->where('email', '=', $email)->first()->password;
-
-        exit(json_encode(['message' => $userPassword, 'securePassword' => $securePassword]));
-    }
 }
