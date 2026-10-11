@@ -32,6 +32,7 @@ Route::get('/dashboard', [dashboardController::class, 'index'])->name('dashboard
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::get('/settings', [settingController::class, 'index'])->name('settings');
+Route::put('/settings', [settingController::class, 'update'])->name('settings.update');
 Route::post('/settings/changePassword', [settingController::class,'changePassword'])->name('changePassword');
 
 Route::get('/customers/dashboard', [customerController::class, 'index'])->name('customers.index');

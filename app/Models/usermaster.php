@@ -21,11 +21,14 @@ class usermaster extends Authenticatable
     protected $primaryKey = 'user_id';
 
     protected $fillable = [
-        'role_id',
         'full_name',
         'email',
         'password',
         'phone',
+        'invoice_template',
+        'company_name',
+        'company_address',
+        'company_gstin',
         'status',
     ];
 
