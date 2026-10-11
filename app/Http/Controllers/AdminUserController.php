@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\NewUserCredentials;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 class AdminUserController extends Controller
 {
@@ -45,6 +48,15 @@ class AdminUserController extends Controller
             'updated_at' => now(),
         ]);
 
+        if ($mailError = $this->sendCredentialsEmail(
+            $validated['full_name'],
+            $validated['email'],
+            $validated['password'],
+        )) {
+            return redirect()->route('admin.users.index')
+                ->with('error', 'Account created, but credentials email was not sent. '.$mailError);
+        }
+
         return redirect()->route('admin.users.index')->with('success', 'User account created.');
     }
 
@@ -64,7 +76,14 @@ class AdminUserController extends Controller
         $user = DB::table('usermaster')->where('user_id', $userId)->first();
         abort_if($user === null, 404, 'User not found.');
 
-        $validated = $request->validate($this->rules($userId, false));
+        $sendCredentials = $request->input('send_credentials') === '1';
+        $rules = $this->rules($userId, false);
+        $rules['send_credentials'] = ['sometimes', Rule::in(['1'])];
+        if ($sendCredentials) {
+            $rules['password'] = ['required', 'string', 'min:8', 'confirmed'];
+        }
+
+        $validated = $request->validate($rules);
         $currentAdminId = $request->cookie('GTA');
         if ((int) $currentAdminId === $userId
             && ($validated['is_admin'] !== 'Y' || $validated['status'] !== '1')) {
@@ -82,11 +101,49 @@ class AdminUserController extends Controller
             'updated_at' => now(),
         ]);
 
+        if ($sendCredentials) {
+            if ($mailError = $this->sendCredentialsEmail(
+                $validated['full_name'],
+                $validated['email'],
+                $validated['password'],
+            )) {
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'Account saved and password updated, but credentials email was not sent. '.$mailError);
+            }
+        }
+
         if ((int) $currentAdminId === $userId) {
             Cookie::queue('CSGO', $validated['full_name'], 60 * 24 * 30);
         }
 
-        return redirect()->route('admin.users.index')->with('success', 'User account updated.');
+        return redirect()->route('admin.users.index')->with(
+            'success',
+            $sendCredentials ? 'Account password updated and credentials email sent.' : 'User account updated.',
+        );
+    }
+
+    private function sendCredentialsEmail(string $fullName, string $email, string $password): ?string
+    {
+        $mailer = config('mail.default');
+        if (in_array($mailer, ['log', 'array'], true)) {
+            return "The configured mailer is '{$mailer}', which does not deliver email. Configure a real SMTP or other delivery mailer.";
+        }
+
+        try {
+            Mail::to($email)->send(new NewUserCredentials($fullName, $email, $password));
+        } catch (Throwable $exception) {
+            report($exception);
+
+            $message = $exception->getMessage();
+            $smtpPassword = (string) config('mail.mailers.smtp.password');
+            if ($smtpPassword !== '') {
+                $message = str_replace($smtpPassword, '[redacted]', $message);
+            }
+
+            return 'Mailer error: '.($message !== '' ? $message : $exception::class);
+        }
+
+        return null;
     }
 
     private function rules(?int $userId = null, bool $creating = true): array

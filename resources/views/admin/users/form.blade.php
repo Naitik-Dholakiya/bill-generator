@@ -41,17 +41,18 @@
     <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-7">
         <div class="mb-5">
             <h3 class="font-semibold text-slate-900 dark:text-white">Sign-in credentials</h3>
-            <p class="mt-1 text-sm text-slate-500 dark:text-zinc-400">{{ $user ? 'Leave password blank to keep the current password.' : 'Create the initial password for this account.' }}</p>
+            <p class="mt-1 text-sm text-slate-500 dark:text-zinc-400">{{ $user ? 'Leave password blank to keep the current password. To resend credentials, enter and confirm a new password, then choose Send email again.' : 'Create the initial password for this account.' }}</p>
         </div>
         <div class="grid gap-5 sm:grid-cols-2">
             <label class="{{ $field }}">Password{{ $user ? ' (optional)' : '' }}
-                <input name="password" type="password" autocomplete="new-password" {{ $user ? '' : 'required' }} minlength="8" class="{{ $input }}">
+                <input id="password" name="password" type="password" autocomplete="new-password" {{ $user ? '' : 'required' }} minlength="8" class="{{ $input }}">
                 @error('password')<span class="mt-1 block text-xs text-red-600">{{ $message }}</span>@enderror
             </label>
             <label class="{{ $field }}">Confirm password
                 <input name="password_confirmation" type="password" autocomplete="new-password" {{ $user ? '' : 'required' }} minlength="8" class="{{ $input }}">
             </label>
         </div>
+        @error('send_credentials')<p class="mt-3 text-xs text-red-600">{{ $message }}</p>@enderror
     </section>
 
     <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-7">
@@ -93,6 +94,11 @@
 
     <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <a href="{{ route('admin.users.index') }}" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">Cancel</a>
+        @if ($user)
+            <button type="submit" name="send_credentials" value="1" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-violet-300 px-5 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950/40">
+                <i class="ti ti-mail-forward" aria-hidden="true"></i> Send email again
+            </button>
+        @endif
         <button type="submit" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700">
             <i class="ti ti-device-floppy" aria-hidden="true"></i> {{ $submitLabel }}
         </button>

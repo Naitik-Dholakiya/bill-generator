@@ -138,6 +138,21 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
+To deliver new-account credential emails, configure a real mail transport in `.env`:
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=your-smtp-host
+MAIL_PORT=587
+MAIL_USERNAME=your-smtp-username
+MAIL_PASSWORD=your-smtp-password
+MAIL_SCHEME=smtp
+MAIL_FROM_ADDRESS=accounts@example.com
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
+The example environment uses the `log` mailer by default, which records messages locally instead of delivering them. Set the SMTP values for the target environment and clear cached configuration after changing them.
+
 ### 4. Run Migrations
 
 ```bash

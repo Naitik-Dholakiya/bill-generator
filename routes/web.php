@@ -21,6 +21,7 @@ use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminUserController;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 
 Route::get('/register', [AuthController::class, 'showRegister']);
@@ -100,7 +101,7 @@ Route::get('/deploy-clear-cache', function (Request $request) {
         @opcache_reset();
     }
 
-    return response('Cache cleared', 200);
+    return response()->json(['message' => 'Cache cleared successfully.']);
 });
 
 Route::get('/add-admin-user', [AdminUserController::class, 'addAdminUser'])->name('add.admin.user');

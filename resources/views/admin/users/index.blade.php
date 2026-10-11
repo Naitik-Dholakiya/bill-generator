@@ -4,6 +4,12 @@
 @section('heading', 'User accounts')
 
 @section('content')
+    @if (session('error'))
+        <div role="alert" class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+            <p class="font-semibold">Email delivery issue</p>
+            <p class="mt-1">{{ session('error') }}</p>
+        </div>
+    @endif
     <div class="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
             <p class="text-sm font-semibold text-violet-700 dark:text-violet-400">Account directory</p>
@@ -60,6 +66,9 @@
                             </td>
                             <td class="px-5 py-4 text-xs text-slate-600 dark:text-zinc-300">{{ config("invoice.templates.{$user->invoice_template}.label", 'Default') }}</td>
                             <td class="px-5 py-4 text-right sm:px-6">
+                                <a href="{{ route('admin.users.edit', $user->user_id) }}#password" class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-violet-200 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-50 dark:border-violet-900 dark:text-violet-300 dark:hover:bg-violet-950/40">
+                                    <i class="ti ti-mail-forward" aria-hidden="true"></i> Send email again
+                                </a>
                                 <a href="{{ route('admin.users.edit', $user->user_id) }}" class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:border-violet-300 hover:text-violet-700 dark:border-zinc-700 dark:text-zinc-200 dark:hover:border-violet-700 dark:hover:text-violet-300">
                                     <i class="ti ti-pencil" aria-hidden="true"></i> Edit
                                 </a>
