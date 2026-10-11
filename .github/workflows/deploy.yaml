@@ -2,7 +2,7 @@ name: Deploy to InfinityFree
 
 on:
   push:
-    branches: [main]   # change to master if that's your branch name
+    branches: [main] # change to master if that's your branch name
   workflow_dispatch:
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'        # match your Laravel / InfinityFree PHP version
+          php-version: "8.2" # match your Laravel / InfinityFree PHP version
           extensions: mbstring, xml, ctype, json, pdo_mysql
 
       # InfinityFree has no Composer/SSH, so vendor/ is built here and uploaded
@@ -46,3 +46,10 @@ jobs:
             storage/framework/sessions/**
             storage/framework/views/**
             tests/**
+
+      - name: Clear Laravel cache
+        continue-on-error: true
+        run: |
+          curl -fsS -A "Mozilla/5.0" \
+            -H "X-Deploy-Token: ${{ secrets.DEPLOY_TOKEN }}" \
+            "${{ secrets.APP_URL }}/deploy-clear-cache?i=1"

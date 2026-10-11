@@ -19,6 +19,9 @@ use App\Http\Controllers\dashboardController;
 use App\Http\Controllers\invoiceGeneratorController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminUserController;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Http\Request;
+
 
 Route::get('/register', [AuthController::class, 'showRegister']);
 Route::post('/register', [AuthController::class, 'register'])->name('register');
@@ -84,4 +87,18 @@ Route::middleware('user.auth')->group(function () {
     Route::delete('/invoice/{invoice}', [invoiceController::class, 'delete'])->name('invoice.delete');
     Route::post('/invoice/generate-pdf', [invoiceController::class, 'createInvoicePost'])->name('invoice.createInvoicePost');
     Route::get('/invoices/pdf/{invoice}', [invoiceGeneratorController::class, 'generate'])->name('invoice.pdf');
+});
+
+Route::get('/deploy-clear-cache', function (Request $request) {
+    $expected = env('DEPLOY_TOKEN');
+    $given = $request->header('X-Deploy-Token', $request->query('token', ''));
+
+    abort_unless($expected && hash_equals($expected, $given), 404);
+
+    Artisan::call('optimize:clear'); // config, route, view, cache, events, compiled
+    if (function_exists('opcache_reset')) {
+        @opcache_reset();
+    }
+
+    return response('Cache cleared', 200);
 });
