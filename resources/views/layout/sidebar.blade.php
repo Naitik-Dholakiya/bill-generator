@@ -1,119 +1,131 @@
-<aside id="sidebar" class="sidebar w-60 bg-white dark:bg-zinc-900 border-r border-gray-100 dark:border-zinc-800
-           flex flex-col h-full transition-transform duration-300
-           fixed md:relative -translate-x-full md:translate-x-0 z-50 md:z-auto">
+@php
+    $sidebarName = request()->cookie('CSGO') ?? 'Admin';
+    $sidebarInitials = collect(preg_split('/\s+/', trim($sidebarName)))
+        ->filter()
+        ->take(2)
+        ->map(fn ($part) => mb_strtoupper(mb_substr($part, 0, 1)))
+        ->implode('');
+@endphp
 
-    {{-- Logo --}}
-    <div class="h-14 border-b border-gray-100 dark:border-zinc-800 px-4 flex items-center gap-3 flex-shrink-0">
-        <div class="w-8 h-8 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-xl
-                    flex items-center justify-center text-white font-medium text-sm flex-shrink-0">V</div>
-        <span class="font-medium text-[15px] tracking-tight">Vyapar</span>
+<aside id="sidebar" aria-label="Main sidebar"
+    class="fixed inset-y-0 left-0 z-50 flex h-dvh w-72 max-w-[calc(100vw-2rem)] -translate-x-full flex-col border-r border-slate-200 bg-white shadow-2xl shadow-slate-950/10 transition-transform duration-300 ease-in-out dark:border-zinc-800 dark:bg-zinc-900 lg:static lg:z-auto lg:h-full lg:w-60 lg:max-w-none lg:translate-x-0 lg:shadow-none">
+
+    <div class="flex h-16 shrink-0 items-center justify-between border-b border-slate-100 px-5 dark:border-zinc-800">
+        <a href="{{ route('dashboard') }}" class="flex min-w-0 items-center gap-3 rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-500/20" aria-label="Vyapar home">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-indigo-600 text-lg font-bold text-white shadow-lg shadow-cyan-900/15">
+                V
+            </span>
+            <span class="min-w-0">
+                <span class="block truncate text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">Vyapar</span>
+                <span class="block text-[10px] font-medium uppercase tracking-[0.16em] text-slate-400 dark:text-zinc-500">Billing workspace</span>
+            </span>
+        </a>
+        <button type="button" onclick="closeMobileSidebar()" aria-label="Close navigation menu"
+            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-cyan-500/20 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white lg:hidden">
+            <i class="ti ti-x text-xl" aria-hidden="true"></i>
+        </button>
     </div>
 
-    {{-- User --}}
-    <div class="px-4 py-3 border-b border-gray-100 dark:border-zinc-800 flex-shrink-0">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-xl
-                        flex items-center justify-center text-white font-medium text-xs flex-shrink-0">
-                {{ strtoupper(substr(request()->cookie('CSGO') ?? 'AD', 0, 2)) }}
-            </div>
-            <div class="min-w-0">
-                <p class="font-medium text-sm truncate">{{ request()->cookie('CSGO') ?? 'Admin' }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Administrator</p>
-            </div>
+    <div class="shrink-0 border-b border-slate-100 p-4 dark:border-zinc-800">
+        <div class="flex min-w-0 items-center gap-3 rounded-2xl bg-slate-50 p-3 dark:bg-zinc-800/70">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-600 text-xs font-bold text-white">
+                {{ $sidebarInitials ?: 'U' }}
+            </span>
+            <span class="min-w-0 flex-1">
+                <span class="block truncate text-sm font-semibold text-slate-800 dark:text-zinc-100">{{ $sidebarName }}</span>
+                <span class="mt-0.5 block truncate text-xs text-slate-500 dark:text-zinc-400">Workspace account</span>
+            </span>
+            <span class="h-2 w-2 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-500/10" title="Online"></span>
         </div>
     </div>
 
-    {{-- Navigation --}}
-    <nav class="flex-1 overflow-y-auto p-2" aria-label="Main navigation">
+    <nav class="sidebar-navigation app-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4" aria-label="Main navigation">
+        <p class="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-zinc-500">
+            Workspace
+        </p>
 
-        <p class="px-3 pt-3 pb-1 text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-            Main</p>
-
-        <a href="{{ route('dashboard') }}"
-            class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-300
-                   hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors mb-0.5
-                   {{ request()->routeIs('dashboard') ? 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-white font-medium' : '' }}">
-            <i class="ti ti-layout-dashboard text-base flex-shrink-0" aria-hidden="true"></i>
+        <a href="{{ route('dashboard') }}" @if (request()->routeIs('dashboard')) aria-current="page" @endif
+            class="mb-1 flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors
+                {{ request()->routeIs('dashboard') ? 'bg-cyan-50 font-semibold text-cyan-800 dark:bg-cyan-950/50 dark:text-cyan-300' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white' }}">
+            <i class="ti ti-layout-dashboard w-5 shrink-0 text-lg" aria-hidden="true"></i>
             <span>Dashboard</span>
+            @if (request()->routeIs('dashboard'))
+                <span class="ml-auto h-1.5 w-1.5 rounded-full bg-cyan-600 dark:bg-cyan-400"></span>
+            @endif
         </a>
-        {{-- {{ route('customers.index') }} --}}
-        <a href="{{ route('customers.index') }}"
-            class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-300
-                   hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors mb-0.5
-                   {{ request()->routeIs('customers.*') ? 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-white font-medium' : '' }}">
-            <i class="ti ti-users text-base flex-shrink-0" aria-hidden="true"></i>
+
+        <p class="px-3 pb-2 pt-5 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-zinc-500">
+            Manage
+        </p>
+
+        <a href="{{ route('customers.index') }}" @if (request()->routeIs('customers.*')) aria-current="page" @endif
+            class="mb-1 flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors
+                {{ request()->routeIs('customers.*') ? 'bg-cyan-50 font-semibold text-cyan-800 dark:bg-cyan-950/50 dark:text-cyan-300' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white' }}">
+            <i class="ti ti-users w-5 shrink-0 text-lg" aria-hidden="true"></i>
             <span>Customers</span>
         </a>
-        
-        <a href="{{ route('suppliers.index') }}"
-            class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-300
-                   hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors mb-0.5
-                   {{ request()->routeIs('suppliers.*') ? 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-white font-medium' : '' }}">
-            <i class="ti ti-package text-base flex-shrink-0" aria-hidden="true"></i>
+
+        <a href="{{ route('suppliers.index') }}" @if (request()->routeIs('suppliers.*')) aria-current="page" @endif
+            class="mb-1 flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors
+                {{ request()->routeIs('suppliers.*') ? 'bg-cyan-50 font-semibold text-cyan-800 dark:bg-cyan-950/50 dark:text-cyan-300' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white' }}">
+            <i class="ti ti-truck-delivery w-5 shrink-0 text-lg" aria-hidden="true"></i>
             <span>Suppliers</span>
         </a>
 
-        <a href="{{ route('products.index') }}"
-            class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-300
-                   hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors mb-0.5
-                   {{ request()->routeIs('products.*') ? 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-white font-medium' : '' }}">
-            <i class="ti ti-package text-base flex-shrink-0" aria-hidden="true"></i>
+        <a href="{{ route('products.index') }}" @if (request()->routeIs('products.*')) aria-current="page" @endif
+            class="mb-1 flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors
+                {{ request()->routeIs('products.*') ? 'bg-cyan-50 font-semibold text-cyan-800 dark:bg-cyan-950/50 dark:text-cyan-300' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white' }}">
+            <i class="ti ti-package w-5 shrink-0 text-lg" aria-hidden="true"></i>
             <span>Products</span>
         </a>
 
-        <a href="{{ route('invoice.index') }}"
-            class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-300
-                   hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors mb-0.5
-                   {{ request()->routeIs('invoices.*') ? 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-white font-medium' : '' }}">
-            <i class="ti ti-file-invoice text-base flex-shrink-0" aria-hidden="true"></i>
+        <a href="{{ route('invoice.index') }}" @if (request()->routeIs('invoice.*')) aria-current="page" @endif
+            class="mb-1 flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors
+                {{ request()->routeIs('invoice.*') ? 'bg-cyan-50 font-semibold text-cyan-800 dark:bg-cyan-950/50 dark:text-cyan-300' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white' }}">
+            <i class="ti ti-file-invoice w-5 shrink-0 text-lg" aria-hidden="true"></i>
             <span class="flex-1">Invoices</span>
-            @if($pendingInvoices ?? 0)
-                <span
-                    class="bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 text-[10px] font-medium px-2 py-0.5 rounded-full">
+            @if ($pendingInvoices ?? 0)
+                <span class="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700 dark:bg-red-950/60 dark:text-red-300">
                     {{ $pendingInvoices }}
                 </span>
             @endif
         </a>
-        <p class="px-3 pt-5 pb-1 text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-            Finance</p>
-        {{-- {{ route('payments.index') }} --}}
-        <a href="#"
-            class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-300
-                   hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors mb-0.5
-                   {{ request()->routeIs('payments.*') ? 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-white font-medium' : '' }}">
-            <i class="ti ti-credit-card text-base flex-shrink-0" aria-hidden="true"></i>
+
+        {{-- <p class="px-3 pb-2 pt-5 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-zinc-500">
+            Finance
+        </p>
+
+        <a href="#" class="mb-1 flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white">
+            <i class="ti ti-credit-card w-5 shrink-0 text-lg" aria-hidden="true"></i>
             <span>Payments</span>
         </a>
-        {{-- {{ route('reports.index') }} --}}
-        <a href="#"
-            class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-300
-                   hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors mb-0.5
-                   {{ request()->routeIs('reports.*') ? 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-white font-medium' : '' }}">
-            <i class="ti ti-chart-bar text-base flex-shrink-0" aria-hidden="true"></i>
-            <span>Reports</span>
-        </a>
 
+        <a href="#" class="mb-1 flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white">
+            <i class="ti ti-chart-bar w-5 shrink-0 text-lg" aria-hidden="true"></i>
+            <span>Reports</span>
+        </a> --}}
     </nav>
 
-    {{-- Footer actions --}}
-    <div class="p-2 border-t border-gray-100 dark:border-zinc-800 flex-shrink-0 space-y-0.5">
-        {{-- {{ route('settings.index') }} --}}
-        <a href="{{ route('settings') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-300
-                   hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors
-                   {{ request()->routeIs('settings') ? 'bg-gray-100 dark:bg-zinc-800 font-medium' : '' }}">
-            <i class="ti ti-settings text-base flex-shrink-0" aria-hidden="true"></i>
+    <div class="shrink-0 border-t border-slate-100 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+        <a href="{{ route('settings') }}" @if (request()->routeIs('settings*')) aria-current="page" @endif
+            class="mb-1 flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors
+                {{ request()->routeIs('settings*') ? 'bg-cyan-50 font-semibold text-cyan-800 dark:bg-cyan-950/50 dark:text-cyan-300' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white' }}">
+            <i class="ti ti-settings w-5 shrink-0 text-lg" aria-hidden="true"></i>
             <span>Settings</span>
         </a>
 
-        <a href="{{ route('logout') }}"
-            onclick="event.preventDefault(); if(confirm('Are you sure you want to logout?')) document.getElementById('logout-form').submit();"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-600 dark:text-red-400
-                   hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
-            <i class="ti ti-logout text-base flex-shrink-0" aria-hidden="true"></i>
-            <span>Logout</span>
-        </a>
-
+        <button type="button" onclick="openLogoutModal(event)"
+            class="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-zinc-300 dark:hover:bg-red-950/30 dark:hover:text-red-400">
+            <i class="ti ti-logout w-5 shrink-0 text-lg" aria-hidden="true"></i>
+            <span>Log out</span>
+        </button>
         <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
+        <div class="mt-3 flex items-center justify-center gap-2 border-t border-slate-100 pt-3 text-[10px] font-medium tracking-wide text-slate-400 dark:border-zinc-800 dark:text-zinc-500">
+            <i class="ti ti-shield-check text-sm text-emerald-500" aria-hidden="true"></i>
+            <span>SECURE WORKSPACE</span>
+        </div>
     </div>
-
 </aside>
+
+<div id="mobileOverlay" aria-hidden="true" onclick="closeMobileSidebar()"
+    class="invisible fixed inset-0 z-40 bg-slate-950/50 opacity-0 backdrop-blur-[2px] transition-opacity duration-300 lg:hidden"></div>

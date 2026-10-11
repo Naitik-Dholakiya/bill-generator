@@ -1,46 +1,24 @@
 @php
-    $year    = date('Y');
+    $year = date('Y');
     $appName = config('app.name', 'Billing System');
-    $links   = [
-        ['label' => 'Documentation', 'href' => '#'],
-        ['label' => 'Privacy',       'href' => '#'],
-        ['label' => 'Terms',         'href' => '#'],
-        ['label' => 'Support',       'href' => '#'],
-    ];
 @endphp
 
-<footer class="flex-shrink-0 border-t border-gray-100 dark:border-zinc-800
-               bg-white dark:bg-zinc-900 px-5 py-3">
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-2">
-
-        {{-- Brand --}}
-        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-            <div class="w-5 h-5 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-md
-                        flex items-center justify-center text-white font-medium text-[9px] flex-shrink-0">B</div>
-            &copy; {{ $year }}
-            <span class="font-medium text-gray-700 dark:text-gray-300">{{ $appName }}</span>.
-            All rights reserved.
+<footer class="shrink-0 border-t border-slate-200 bg-white px-4 py-3.5 dark:border-zinc-800 dark:bg-zinc-900 sm:px-6">
+    <div class="mx-auto flex max-w-screen-2xl flex-col items-center justify-between gap-2.5 sm:flex-row sm:gap-4">
+        <div class="flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-zinc-400 sm:justify-start">
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-indigo-600 text-[10px] font-bold text-white" aria-hidden="true">V</span>
+            <span>&copy; {{ $year }}</span>
+            <span class="font-semibold text-slate-700 dark:text-zinc-200">{{ $appName }}</span>
+            <span class="hidden text-slate-300 dark:text-zinc-700 sm:inline" aria-hidden="true">&middot;</span>
+            <span class="hidden sm:inline">All rights reserved</span>
         </div>
 
-        {{-- Links + version --}}
-        <div class="flex items-center gap-4">
-            <nav class="flex items-center gap-4" aria-label="Footer">
-                @foreach($links as $link)
-                    <a href="{{ $link['href'] }}"
-                       class="text-xs text-gray-500 dark:text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">
-                        {{ $link['label'] }}
-                    </a>
-                @endforeach
-            </nav>
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium
-                         bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400
-                         border border-gray-200 dark:border-zinc-700">
-                <svg class="w-2 h-2 text-emerald-500 flex-shrink-0" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true">
-                    <circle cx="4" cy="4" r="3"/>
-                </svg>
-                v 1.0.0
+        <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] font-medium text-slate-500 dark:text-zinc-400 sm:justify-end">
+            <span>Billing workspace</span>
+            <span class="hidden h-3 w-px bg-slate-200 dark:bg-zinc-700 sm:block" aria-hidden="true"></span>
+            <span class="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-semibold tracking-wide text-slate-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+                VERSION 1.0.0
             </span>
         </div>
-
     </div>
 </footer>

@@ -611,21 +611,9 @@
     </div>
 </div>
 
-{{-- Mobile overlay --}}
-<div id="mobileOverlay"
-     onclick="toggleMobileSidebar()"
-     class="hidden fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm"></div>
-
 @push('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script>
-function toggleMobileSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('mobileOverlay');
-    sidebar.classList.toggle('-translate-x-full');
-    overlay.classList.toggle('hidden');
-}
-
 function setTheme(theme) {
     const root = document.documentElement;
     const icon = document.getElementById('themeIcon');
