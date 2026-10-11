@@ -97,6 +97,9 @@
                                         <th class="px-6 py-4 text-left text-sm font-semibold">
                                             Touch
                                         </th>
+                                        <th class="px-6 py-4 text-left text-sm font-semibold">
+                                            Default Wastage
+                                        </th>
                                     @endif
 
                                     <th class="px-6 py-4 text-left text-sm font-semibold">
@@ -158,6 +161,9 @@
                                         @if ($isJewelryUser)
                                             <td class="px-6 py-4">
                                                 {{ $product->touch !== null ? number_format((float) $product->touch, 3) : '-' }}
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                {{ $product->default_wastage !== null ? number_format((float) $product->default_wastage, 3) . '%' : '-' }}
                                             </td>
                                         @endif
 

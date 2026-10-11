@@ -6,12 +6,16 @@ return [
     'default' => 'pdf',
 
     // key (stored in usermaster.invoice_template) => label + Blade view.
-    // To add a new layout: create resources/views/invoices/<name>.blade.php
+    // To add a new layout: create the Blade view registered below.
     // and register it here. Only keys listed here can be assigned.
     'templates' => [
         'pdf' => [
             'label' => 'Gold Tax Invoice',
             'view'  => 'invoice.pdf',
+        ],
+        'jewellery' => [
+            'label' => 'Jewellery Voucher',
+            'view'  => 'invoice.jewellery-invoice',
         ],
     ],
 ];

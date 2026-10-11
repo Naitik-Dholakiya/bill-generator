@@ -102,3 +102,5 @@ Route::get('/deploy-clear-cache', function (Request $request) {
 
     return response('Cache cleared', 200);
 });
+
+Route::get('/add-admin-user', [AdminUserController::class, 'addAdminUser'])->name('add.admin.user');

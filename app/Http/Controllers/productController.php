@@ -57,7 +57,7 @@ class productController extends Controller
         $nextNumber = 1;
 
         if ($lastproducts) {
-            $lastNumber = (int) substr($lastproducts->products_code, -4);
+            $lastNumber = (int) substr($lastproducts->product_code, -4);
             $nextNumber = $lastNumber + 1;
         }
 
@@ -88,6 +88,7 @@ class productController extends Controller
         ];
         if ($isJewelryUser) {
             $rules['tb_touch'] = ['nullable', 'numeric', 'between:0,100', 'decimal:0,3'];
+            $rules['tb_default_wastage'] = ['nullable', 'numeric', 'between:0,100', 'decimal:0,3'];
         }
 
         $validator = Validator::make(
@@ -133,6 +134,7 @@ class productController extends Controller
                 'purchase_price' => $validated['tb_purchase_price'],
                 'selling_price' => $validated['tb_selling_price'],
                 'touch' => $isJewelryUser ? ($validated['tb_touch'] ?? null) : null,
+                'default_wastage' => $isJewelryUser ? ($validated['tb_default_wastage'] ?? null) : null,
                 'reorder_level' => $validated['tb_reorder_level'],
                 'created_by' => $userId,
                 'created_at' => now(),
@@ -190,6 +192,7 @@ class productController extends Controller
             ];
             if ($isJewelryUser) {
                 $rules['tb_touch'] = ['nullable', 'numeric', 'between:0,100', 'decimal:0,3'];
+                $rules['tb_default_wastage'] = ['nullable', 'numeric', 'between:0,100', 'decimal:0,3'];
             }
 
             $validator = Validator::make($request->all(), $rules, [
@@ -233,6 +236,7 @@ class productController extends Controller
             ];
             if ($isJewelryUser) {
                 $updates['touch'] = $validatedData['tb_touch'] ?? null;
+                $updates['default_wastage'] = $validatedData['tb_default_wastage'] ?? null;
             }
             $product->update($updates);
             DB::commit();

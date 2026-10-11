@@ -216,6 +216,19 @@
                                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                     @enderror
                                 </div>
+                                <div>
+                                    <label for="tb_default_wastage" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Default Wastage <span class="font-normal text-gray-400">(optional %)</span>
+                                    </label>
+                                    <input id="tb_default_wastage" type="number" name="tb_default_wastage" min="0" max="100" step="0.001"
+                                        value="{{ old('tb_default_wastage', $product->default_wastage) }}"
+                                        placeholder="e.g. 3.000"
+                                        class="w-full px-4 py-3 rounded-xl bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 focus:ring-2 focus:ring-cyan-500 outline-none">
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Product default; editable for each invoice item.</p>
+                                    @error('tb_default_wastage')
+                                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
                             @endif
 
                             <!-- Reorder Level -->

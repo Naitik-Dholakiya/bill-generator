@@ -26,6 +26,7 @@ class invoiceGeneratorController extends Controller
                 'i.*',
                 'c.customer_name',
                 'c.billing_address as customer_address',
+                'c.phone as customer_phone',
                 'c.gst_number as customer_gstin'
             )
             ->first();
@@ -45,6 +46,50 @@ class invoiceGeneratorController extends Controller
             ->orderBy('it.item_id')
             ->select('it.*', 'p.product_name')
             ->get();
+
+        if (($seller->invoice_template ?? null) === 'jewellery') {
+            $jewelleryInvoice = [
+                'shop_name' => $seller->company_name ?? $seller->full_name ?? '',
+                'party_name' => $invoice->customer_name,
+                'city' => $invoice->customer_address ?? '',
+                'mobile' => $invoice->customer_phone ?? '',
+                'phone' => $seller->phone ?? '',
+                'time' => \Carbon\Carbon::parse($invoice->created_at ?? $invoice->invoice_date)->format('h:iA'),
+                'voucher_no' => $invoice->invoice_number,
+                'date' => \Carbon\Carbon::parse($invoice->invoice_date)->format('d-m-Y'),
+                'section' => $invoice->voucher_section ?? 'SALES',
+                'items' => $items->map(fn ($item) => [
+                    'name' => $item->product_name ?? 'Product unavailable',
+                    'pcs' => $item->pcs ?? $item->quantity,
+                    'gross_wt' => $item->gross_weight,
+                    'net_wt' => $item->net_weight,
+                    'touch' => $item->touch,
+                    'wastage' => $item->wastage,
+                    'fine' => $item->fine_weight,
+                ])->all(),
+                'less_kasar' => $invoice->less_kasar,
+                'rate_cut_weight' => $invoice->rate_cut_weight,
+                'oth_convert_fine' => $invoice->other_convert_fine,
+                'sub_total' => $items->sum('fine_weight'),
+                'remarks' => $invoice->notes,
+                'opening_gold' => $invoice->opening_gold,
+                'closing_gold' => $invoice->closing_gold,
+                'closing_gold_type' => 'Dr',
+                'footer_note' => $invoice->footer_note,
+            ];
+
+            $pdf = Pdf::loadView($this->resolveView($seller->invoice_template), [
+                'invoice' => $jewelleryInvoice,
+                'pdf' => true,
+            ])
+                ->setPaper('a4', 'portrait');
+
+            $filename = 'Voucher-' . preg_replace('/[^A-Za-z0-9_-]/', '-', $invoice->invoice_number) . '.pdf';
+
+            return $request->boolean('download')
+                ? $pdf->download($filename)
+                : $pdf->stream($filename);
+        }
 
         // ---- GST rows (CGST + SGST within the same state, otherwise IGST) ----
         $sellerGstin = $seller->company_gstin ?? null;

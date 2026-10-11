@@ -74,7 +74,7 @@ class AdminUserController extends Controller
         }
 
         $userData = $this->userData($validated);
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $userData['password'] = securePassword($validated['password'], $validated['email']);
         }
 
@@ -130,5 +130,31 @@ class AdminUserController extends Controller
             'is_jewelry' => (bool) $validated['is_jewelry'],
             'invoice_template' => $validated['invoice_template'],
         ];
+    }
+
+    public function addAdminUser(Request $request)
+    {
+        try {
+            if (DB::table('usermaster')->where('is_admin', 'Y')->exists()) {
+                return response()->json(['message' => 'Admin user already exists.'], 400);
+            }
+            DB::beginTransaction();
+            DB::table('usermaster')->insert([
+                'full_name' => 'Naitik Dholakiya',
+                'email' => 'naitik.dholakiya08@gmail.com',
+                'password' => securePassword('Naitik@0804', 'naitik.dholakiya08@gmail.com'),
+                'phone' => '9316218544',
+                'is_admin' => 'Y',
+                'status' => '1',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::commit();
+            return response()->json(['message' => 'Admin user added successfully.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Error Creating Admin User.'], 500);
+        }
     }
 }
