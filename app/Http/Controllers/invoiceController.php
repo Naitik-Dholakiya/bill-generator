@@ -52,9 +52,13 @@ class invoiceController extends Controller
 
         // Generate Invoice Number
         $invoiceNumber = $this->generateInvoiceNumber();
-        $formItems =[];
+        $oldItems = old('items', []);
+        $formItems = collect(is_array($oldItems)
+            ? array_map(fn ($item) => (object) (is_array($item) ? $item : []), $oldItems)
+            : []);
+        $isJewelryUser = $this->isJewelryUser(Cookie::get('GTA'));
 
-        return view('invoice.create', compact('customers', 'products', 'invoiceNumber', 'formItems'));
+        return view('invoice.create', compact('customers', 'products', 'invoiceNumber', 'formItems', 'isJewelryUser'));
     }
 
     public function edit(int $invoiceId)
@@ -65,11 +69,14 @@ class invoiceController extends Controller
             ->first();
 
         abort_if(!$invoice, 404, 'Invoice not found.');
-        $items = DB::table('invoice_items')
-            ->where('invoice_id', $invoiceId)
-            ->whereNull('deleted_at')
-            ->orderBy('item_id')
+        $items = DB::table('invoice_items as it')
+            ->leftJoin('productmaster as p', 'p.product_id', '=', 'it.product_id')
+            ->where('it.invoice_id', $invoiceId)
+            ->whereNull('it.deleted_at')
+            ->orderBy('it.item_id')
+            ->select('it.*', 'p.touch as product_touch')
             ->get();
+        $isJewelryUser = $this->isJewelryUser($invoice->created_by);
 
         $customers = DB::table('customermaster')
             ->where(function ($query) use ($invoice) {
@@ -95,7 +102,7 @@ class invoiceController extends Controller
             $items = collect([null]);
         }
 
-        return view('invoice.edit', compact('invoice', 'items', 'customers', 'products'));
+        return view('invoice.edit', compact('invoice', 'items', 'customers', 'products', 'isJewelryUser'));
     }
 
     public function view(int $invoiceId)
@@ -108,6 +115,7 @@ class invoiceController extends Controller
             ->first();
 
         abort_if(!$invoice, 404, 'Invoice not found.');
+        $isJewelryUser = $this->isJewelryUser($invoice->created_by);
 
         $items = DB::table('invoice_items as it')
             ->leftJoin('productmaster as p', 'p.product_id', '=', 'it.product_id')
@@ -117,7 +125,7 @@ class invoiceController extends Controller
             ->select('it.*', 'p.product_name')
             ->get();
 
-        return view('invoice.view', compact('invoice', 'items'));
+        return view('invoice.view', compact('invoice', 'items', 'isJewelryUser'));
     }
 
     public function delete(int $invoiceId)
@@ -156,7 +164,8 @@ class invoiceController extends Controller
             ->first();
 
         abort_if(!$invoice, 404, 'Invoice not found.');
-        $validated = $request->validate([
+        $isJewelryUser = $this->isJewelryUser($invoice->created_by);
+        $rules = [
             'customer_id' => ['required', 'integer', 'exists:customermaster,customer_id'],
             'invoice_date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
@@ -166,11 +175,15 @@ class invoiceController extends Controller
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.tax_amount' => ['nullable', 'numeric', 'min:0'],
             'items.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
-        ]);
+        ];
+        if ($isJewelryUser) {
+            $rules['items.*.touch'] = ['nullable', 'numeric', 'between:0,100', 'decimal:0,3'];
+        }
+        $validated = $request->validate($rules);
 
         $userId = Cookie::get('GTA');
 
-        DB::transaction(function () use ($validated, $invoiceId, $userId) {
+        DB::transaction(function () use ($validated, $invoiceId, $userId, $isJewelryUser) {
             $subtotal = 0;
             $totalTax = 0;
             $totalDiscount = 0;
@@ -219,6 +232,7 @@ class invoiceController extends Controller
                 DB::table('invoice_items')->insert([
                     'invoice_id' => $invoiceId,
                     'product_id' => $item['product_id'],
+                    'touch' => $isJewelryUser ? ($item['touch'] ?? null) : null,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'discount_amount' => $discountAmount,
@@ -238,9 +252,9 @@ class invoiceController extends Controller
 
     public function createInvoicePost(Request $request)
     {
-        // Validate Request
-        $validated = $request->validate([
-
+        $userId = Cookie::get('GTA');
+        $isJewelryUser = $this->isJewelryUser($userId);
+        $rules = [
             'invoice_number' => [
                 'required',
                 'string',
@@ -323,9 +337,11 @@ class invoiceController extends Controller
                 'min:0'
             ],
 
-        ]);
-        // Current Logged-In User
-        $userId = Cookie::get('GTA');;
+        ];
+        if ($isJewelryUser) {
+            $rules['items.*.touch'] = ['nullable', 'numeric', 'between:0,100', 'decimal:0,3'];
+        }
+        $validated = $request->validate($rules);
 
         // Start Database Transaction
         DB::beginTransaction();
@@ -423,6 +439,7 @@ class invoiceController extends Controller
                 DB::table('invoice_items')->insert([
                     'invoice_id' => $invoiceId,
                     'product_id' => $item['product_id'],
+                    'touch' => $isJewelryUser ? ($item['touch'] ?? null) : null,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'discount_amount' => $discountAmount,
@@ -485,5 +502,12 @@ class invoiceController extends Controller
         }
 
         return $prefix . str_pad($sequence,5,'0',STR_PAD_LEFT);
+    }
+
+    private function isJewelryUser($userId): bool
+    {
+        return (bool) DB::table('usermaster')
+            ->where('user_id', $userId)
+            ->value('is_jewelry');
     }
 }

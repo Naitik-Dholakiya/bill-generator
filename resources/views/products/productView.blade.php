@@ -88,7 +88,7 @@
             </div>
 
             <!-- Quick Stats -->
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 {{ $isJewelryUser ? 'xl:grid-cols-5' : 'xl:grid-cols-4' }} gap-4 mb-6">
 
                 <div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-5">
 
@@ -101,6 +101,15 @@
                     </p>
 
                 </div>
+
+                @if ($isJewelryUser)
+                    <div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-5">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Touch</p>
+                        <p class="text-lg font-bold text-amber-600 mt-1">
+                            {{ $product->touch !== null ? number_format((float) $product->touch, 3) : '-' }}
+                        </p>
+                    </div>
+                @endif
 
                 <div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-5">
 

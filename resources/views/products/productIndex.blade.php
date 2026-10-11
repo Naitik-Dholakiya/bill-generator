@@ -93,6 +93,12 @@
                                         Selling Price
                                     </th>
 
+                                    @if ($isJewelryUser)
+                                        <th class="px-6 py-4 text-left text-sm font-semibold">
+                                            Touch
+                                        </th>
+                                    @endif
+
                                     <th class="px-6 py-4 text-left text-sm font-semibold">
                                         Reorder Level
                                     </th>
@@ -148,6 +154,12 @@
                                         <td class="px-6 py-4">
                                             ₹{{ number_format($product->selling_price, 2) }}
                                         </td>
+
+                                        @if ($isJewelryUser)
+                                            <td class="px-6 py-4">
+                                                {{ $product->touch !== null ? number_format((float) $product->touch, 3) : '-' }}
+                                            </td>
+                                        @endif
 
                                         <td class="px-6 py-4">
                                             @if ($product->reorder_level == 0)

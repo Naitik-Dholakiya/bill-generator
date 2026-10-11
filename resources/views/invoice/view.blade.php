@@ -70,6 +70,9 @@
                             <thead class="bg-gray-50 dark:bg-zinc-800/50">
                                 <tr>
                                     <th class="px-6 py-3 text-left font-semibold text-gray-600 dark:text-gray-400">Product</th>
+                                    @if ($isJewelryUser)
+                                        <th class="px-6 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">Touch</th>
+                                    @endif
                                     <th class="px-6 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">Quantity</th>
                                     <th class="px-6 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">Unit Price</th>
                                     <th class="px-6 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">Tax</th>
@@ -81,6 +84,9 @@
                                 @forelse ($items as $item)
                                     <tr>
                                         <td class="px-6 py-4 text-gray-900 dark:text-white">{{ $item->product_name ?? 'Product unavailable' }}</td>
+                                        @if ($isJewelryUser)
+                                            <td class="px-6 py-4 text-right">{{ $item->touch !== null ? number_format((float) $item->touch, 3) : '-' }}</td>
+                                        @endif
                                         <td class="px-6 py-4 text-right">{{ number_format($item->quantity, 3) }}</td>
                                         <td class="px-6 py-4 text-right">₹{{ number_format($item->unit_price, 2) }}</td>
                                         <td class="px-6 py-4 text-right">₹{{ number_format($item->tax_amount, 2) }}</td>
@@ -89,7 +95,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">No active invoice items.</td>
+                                        <td colspan="{{ $isJewelryUser ? 7 : 6 }}" class="px-6 py-8 text-center text-gray-500">No active invoice items.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

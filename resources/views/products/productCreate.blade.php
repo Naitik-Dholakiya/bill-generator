@@ -150,7 +150,7 @@
 
                                 <!-- Price Section -->
                                 <div class="md:col-span-2">
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div class="grid grid-cols-1 {{ $isJewelryUser ? 'md:grid-cols-4' : 'md:grid-cols-3' }} gap-6">
 
                                         <!-- Purchase Price -->
                                         <div>
@@ -173,6 +173,22 @@
                                                 value="{{ old('tb_selling_price') }}"
                                                 class="w-full px-4 py-3 rounded-xl bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700">
                                         </div>
+
+                                        @if ($isJewelryUser)
+                                            <div>
+                                                <label for="tb_touch" class="block text-sm font-medium mb-2">
+                                                    Touch <span class="text-gray-400 font-normal">(optional)</span>
+                                                </label>
+                                                <input id="tb_touch" type="number" name="tb_touch" min="0" max="100" step="0.001"
+                                                    value="{{ old('tb_touch') }}"
+                                                    placeholder="e.g. 91.600"
+                                                    class="w-full px-4 py-3 rounded-xl bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 focus:ring-2 focus:ring-cyan-500 outline-none">
+                                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Optional product default; editable on each invoice.</p>
+                                                @error('tb_touch')
+                                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                                @enderror
+                                            </div>
+                                        @endif
 
                                         <!-- Reorder Level -->
                                         <div>

@@ -145,6 +145,12 @@
                                                 Product
                                             </th>
 
+                                            @if ($isJewelryUser)
+                                                <th class="text-left py-3 px-2 text-gray-600 dark:text-gray-400">
+                                                    Touch (0-100)
+                                                </th>
+                                            @endif
+
                                             <th class="text-left py-3 px-2 text-gray-600 dark:text-gray-400">
                                                 Quantity
                                             </th>
@@ -188,6 +194,7 @@
                                                     @foreach ($products as $product)
                                                         <option value="{{ $product->product_id }}"
                                                             data-price="{{ $product->selling_price }}"
+                                                            data-touch="{{ $product->touch }}"
                                                             {{ old("items.$index.product_id", $formItem->product_id ?? '') == $product->product_id ? 'selected' : '' }}>
                                                             {{ $product->product_name }}
                                                         </option>
@@ -196,6 +203,19 @@
                                                 </select>
 
                                             </td>
+
+                                            @if ($isJewelryUser)
+                                                <td class="py-4 px-2">
+                                                    <input type="number" name="items[{{ $index }}][touch]"
+                                                        value="{{ old("items.$index.touch", $formItem->touch ?? $formItem->product_touch ?? '') }}"
+                                                        min="0" max="100" step="0.001" placeholder="—"
+                                                        aria-label="Touch for {{ $formItem->product_name ?? 'invoice item' }}"
+                                                        class="touch-value w-24 px-3 py-2.5 rounded-lg bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 focus:ring-2 focus:ring-cyan-500 outline-none">
+                                                    @error("items.$index.touch")
+                                                        <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                                                    @enderror
+                                                </td>
+                                            @endif
 
                                             <!-- Quantity -->
                                             <td class="py-4 px-2">
@@ -452,7 +472,8 @@
 
                         @foreach ($products as $product)
                             <option value="{{ $product->product_id }}"
-                                data-price="{{ $product->selling_price }}">
+                                data-price="{{ $product->selling_price }}"
+                                data-touch="{{ $product->touch }}">
                                 {{ $product->product_name }}
                             </option>
                         @endforeach
@@ -460,6 +481,20 @@
                     </select>
 
                 </td>
+
+                @if ($isJewelryUser)
+                    <td class="py-4 px-2">
+                        <input
+                            type="number"
+                            name="items[${itemIndex}][touch]"
+                            min="0"
+                            max="100"
+                            step="0.001"
+                            placeholder="—"
+                            aria-label="Touch for invoice item"
+                            class="touch-value w-24 px-3 py-2.5 rounded-lg bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 focus:ring-2 focus:ring-cyan-500 outline-none">
+                    </td>
+                @endif
 
                 <td class="py-4 px-2">
 
@@ -577,6 +612,11 @@
 
             row.querySelector('.unit-price').value =
                 parseFloat(price).toFixed(2);
+
+            @if ($isJewelryUser)
+                row.querySelector('.touch-value').value =
+                    selectedOption.dataset.touch || '';
+            @endif
 
             calculateRow(select);
 

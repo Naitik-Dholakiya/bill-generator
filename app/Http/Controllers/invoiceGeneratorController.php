@@ -41,6 +41,7 @@ class invoiceGeneratorController extends Controller
 
         // The seller is the user who created the invoice; their template is used.
         $seller = DB::table('usermaster')->where('user_id', $invoice->created_by)->first();
+        $isJewelryUser = (bool) ($seller->is_jewelry ?? false);
 
         $items = DB::table('invoice_items as it')
             ->join('productmaster as p', 'p.product_id', '=', 'it.product_id')
@@ -83,6 +84,7 @@ class invoiceGeneratorController extends Controller
         $data = [
             'invoice'      => $invoice,
             'seller'       => $seller,
+            'isJewelryUser' => $isJewelryUser,
             'items'        => $items,
             'taxRows'      => $taxRows,
             'totalQty'     => $totalQty,

@@ -17,6 +17,7 @@ use App\Http\Controllers\productController;
 use App\Http\Controllers\invoiceController;
 use App\Http\Controllers\dashboardController;
 use App\Http\Controllers\invoiceGeneratorController;
+use App\Http\Controllers\jewelryUserController;
 
 Route::get("/secret/add-dummy-user", [AuthController::class, 'addDummyUser']);
 Route::get('/secret/check-user', [AuthController::class, 'check']);
@@ -34,6 +35,12 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/settings', [settingController::class, 'index'])->name('settings');
 Route::put('/settings', [settingController::class, 'update'])->name('settings.update');
 Route::post('/settings/changePassword', [settingController::class,'changePassword'])->name('changePassword');
+
+Route::get('/admin/jewelry-users', [jewelryUserController::class, 'index'])
+    ->name('admin.jewelry-users.index');
+Route::put('/admin/jewelry-users/{userId}', [jewelryUserController::class, 'update'])
+    ->whereNumber('userId')
+    ->name('admin.jewelry-users.update');
 
 Route::get('/customers/dashboard', [customerController::class, 'index'])->name('customers.index');
 Route::get('/customers/create', [customerController::class,'createCustomer'])->name('createCustomer');

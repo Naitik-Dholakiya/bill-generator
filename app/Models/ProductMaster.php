@@ -20,6 +20,7 @@ class ProductMaster extends Model
         // 'barcode',
         'purchase_price',
         'selling_price',
+        'touch',
         'reorder_level',
         'status',
         'created_by',
@@ -29,6 +30,7 @@ class ProductMaster extends Model
     protected $casts = [
         'purchase_price' => 'decimal:2',
         'selling_price'  => 'decimal:2',
+        'touch'          => 'decimal:3',
         'created_at'     => 'datetime',
         'updated_at'     => 'datetime',
         'deleted_at'     => 'datetime',

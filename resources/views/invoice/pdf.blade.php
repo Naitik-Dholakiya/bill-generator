@@ -127,7 +127,10 @@
     <thead>
         <tr>
             <th class="first" style="width: 5%;">Sl<br>No.</th>
-            <th style="width: 43%;">Description of Goods</th>
+            <th style="width: {{ $isJewelryUser ? '34%' : '43%' }};">Description of Goods</th>
+            @if ($isJewelryUser)
+                <th style="width: 9%;">Touch</th>
+            @endif
             <th style="width: 15%;">Quantity</th>
             <th style="width: 13%;">Rate</th>
             <th style="width: 6%;">per</th>
@@ -139,6 +142,9 @@
             <tr>
                 <td class="first c">{{ $i + 1 }}</td>
                 <td class="bold">{{ $item->product_name }}</td>
+                @if ($isJewelryUser)
+                    <td class="num">{{ $item->touch !== null ? number_format((float) $item->touch, 3, '.', '') : '-' }}</td>
+                @endif
                 <td class="num bold">{{ number_format($item->quantity, 3, '.', '') }} {{ $item->unit }}</td>
                 <td class="num">{{ \App\Support\IndianFormat::money($item->unit_price) }}</td>
                 <td>{{ $item->unit }}</td>
@@ -150,6 +156,9 @@
             <tr>
                 <td class="first">&nbsp;</td>
                 <td class="tax-label">Less : Discount</td>
+                @if ($isJewelryUser)
+                    <td>&nbsp;</td>
+                @endif
                 <td>&nbsp;</td>
                 <td>&nbsp;</td>
                 <td>&nbsp;</td>
@@ -161,6 +170,9 @@
             <tr>
                 <td class="first">&nbsp;</td>
                 <td class="tax-label">{{ $tax['label'] }}</td>
+                @if ($isJewelryUser)
+                    <td>&nbsp;</td>
+                @endif
                 <td>&nbsp;</td>
                 <td class="num tax-val">{{ number_format($tax['rate'], 2) }}</td>
                 <td class="tax-val">%</td>
@@ -172,6 +184,9 @@
         <tr class="filler">
             <td class="first" style="height: {{ $fillerHeight }}pt;">&nbsp;</td>
             <td>&nbsp;</td>
+            @if ($isJewelryUser)
+                <td>&nbsp;</td>
+            @endif
             <td>&nbsp;</td>
             <td>&nbsp;</td>
             <td>&nbsp;</td>
@@ -181,6 +196,9 @@
         <tr class="total">
             <td class="first">&nbsp;</td>
             <td class="num">Total</td>
+            @if ($isJewelryUser)
+                <td>&nbsp;</td>
+            @endif
             <td class="num bold" style="font-size: 10pt;">
                 @if ($totalQty !== null)
                     {{ number_format($totalQty, 3, '.', '') }} {{ $totalUnit }}

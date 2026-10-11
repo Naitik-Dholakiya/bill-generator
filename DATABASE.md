@@ -779,6 +779,16 @@ Stores supplier purchase records.
 | total_amount  | DECIMAL(12,2) | NOT NULL                    |
 | created_at    | TIMESTAMP     | DEFAULT CURRENT_TIMESTAMP   |
 
+## Jewelry Touch Fields
+
+Run `php artisan migrate` to add optional jewelry support:
+
+- `usermaster.is_jewelry` enables jewelry-only touch fields for that account.
+- `productmaster.touch` stores the product's default touch value.
+- `invoice_items.touch` stores the editable touch value used on that invoice line.
+
+The migration adds columns to existing tables; ensure the documented `invoice_items` table already exists before running it. The touch value is optional, accepts values from `0` to `100` with up to three decimal places, and is displayed without changing invoice prices or totals. The feature is off by default. Administrators can manage it from **Jewelry accounts** in the application sidebar.
+
 ---
 
 ## purchase_items
