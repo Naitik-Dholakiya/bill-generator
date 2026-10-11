@@ -1,0 +1,48 @@
+name: Deploy to InfinityFree
+
+on:
+  push:
+    branches: [main]   # change to master if that's your branch name
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'        # match your Laravel / InfinityFree PHP version
+          extensions: mbstring, xml, ctype, json, pdo_mysql
+
+      # InfinityFree has no Composer/SSH, so vendor/ is built here and uploaded
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      # Uncomment if you use Vite / Mix
+      # - name: Build frontend assets
+      #   run: |
+      #     npm ci
+      #     npm run build
+
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          server-dir: /htdocs/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            .env
+            storage/logs/**
+            storage/framework/cache/**
+            storage/framework/sessions/**
+            storage/framework/views/**
+            tests/**
