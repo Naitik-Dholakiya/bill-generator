@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
-class InvoiceGeneratorController extends Controller
+class invoiceGeneratorController extends Controller
 {
     /**
      * GET /invoices/{invoice}/pdf          -> opens the PDF in the browser

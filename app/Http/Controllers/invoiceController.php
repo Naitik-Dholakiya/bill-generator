@@ -8,7 +8,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Cookie;
 use Carbon\Carbon;
 
-class InvoiceController extends Controller
+class invoiceController extends Controller
 {
     /**
      * Display invoice list.
