@@ -10,7 +10,7 @@ return [
     // and register it here. Only keys listed here can be assigned.
     'templates' => [
         'pdf' => [
-            'label' => 'Gold Tax Invoice',
+            'label' => 'General PDF Invoice',
             'view'  => 'invoice.pdf',
         ],
         'jewellery' => [

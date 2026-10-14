@@ -131,113 +131,16 @@
                         </p>
                     </div>
 
-                    <!-- Form -->
-                    <form method="POST" action="{{ route('register') }}" class="space-y-4">
-                        @csrf
-
-                        <!-- Name -->
-                        <div>
-                            <label class="block text-gray-300 mb-2 text-sm">
-                                Full Name
-                            </label>
-
-                            <input
-                                id="tb_name"
-                                type="text"
-                                name="tb_name"
-                                value="{{ old('tb_name') }}"
-                                required
-                                autofocus
-                                placeholder="Enter your full name"
-                                class="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-cyan-400 transition duration-300 @error('tb_name') border-red-500 @enderror"
-                            >
-
-                            @error('tb_name')
-                                <p class="text-red-400 text-sm mt-1">
-                                    {{ $message }}
-                                </p>
-                            @enderror
-                        </div>
-
-                        <!-- Email -->
-                        <div>
-                            <label class="block text-gray-300 mb-2 text-sm">
-                                Email Address
-                            </label>
-
-                            <input
-                                id="tb_email"
-                                type="email"
-                                name="tb_email"
-                                value="{{ old('tb_email') }}"
-                                required
-                                placeholder="Enter your email"
-                                class="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-purple-400 transition duration-300 @error('tb_email') border-red-500 @enderror"
-                            >
-
-                            @error('tb_email')
-                                <p class="text-red-400 text-sm mt-1">
-                                    {{ $message }}
-                                </p>
-                            @enderror
-                        </div>
-
-                        <!-- Password -->
-                        <div>
-                            <label class="block text-gray-300 mb-2 text-sm">
-                                Password
-                            </label>
-
-                            <input
-                                id="tb_password"
-                                type="password"
-                                name="tb_password"
-                                required
-                                placeholder="Create a password"
-                                class="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-pink-400 transition duration-300 @error('tb_password') border-red-500 @enderror"
-                            >
-
-                            @error('tb_password')
-                                <p class="text-red-400 text-sm mt-1">
-                                    {{ $message }}
-                                </p>
-                            @enderror
-                        </div>
-
-                        <!-- Confirm Password -->
-                        <div>
-                            <label class="block text-gray-300 mb-2 text-sm">
-                                Confirm Password
-                            </label>
-
-                            <input
-                                id="tb_password_confirmation"
-                                type="password"
-                                name="tb_password_confirmation"
-                                required
-                                placeholder="Confirm your password"
-                                class="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-green-400 transition duration-300"
-                            >
-                        </div>
-
-                        <!-- Button -->
-                        <button
-                            type="submit"
-                            class="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 text-white font-semibold text-sm sm:text-base hover:scale-[1.01] transition duration-300 shadow-lg hover:shadow-cyan-500/30"
-                        >
-                            Create Account
-                        </button>
-
-                        <!-- Login -->
-                        <p class="text-center text-gray-400 text-sm pt-2">
-                            Already have an account?
-                            <a href="{{ url('/') }}"
-                                class="text-cyan-400 hover:text-cyan-300 font-semibold">
-                                Login
-                            </a>
+                    <!-- Registration disabled -->
+                    <div class="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6 text-left text-gray-200">
+                        <h3 class="text-xl font-semibold text-white">Registration is disabled</h3>
+                        <p class="text-sm text-gray-300">
+                            New users are created from the admin panel. Please sign in with a valid account.
                         </p>
-
-                    </form>
+                        <a href="{{ url('/') }}" class="inline-block rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:scale-[1.01]">
+                            Go to Login
+                        </a>
+                    </div>
 
                 </div>
             </div>

@@ -9,11 +9,6 @@ use Illuminate\Support\Facades\DB;
 class AuthController extends Controller
 {
     // Load The Views
-    public function showRegister()
-    {
-        return view('auth.register');
-    }
-
     public function showLogin()
     {
         $userId = Cookie::get('GTA');
@@ -26,36 +21,6 @@ class AuthController extends Controller
         }
 
         return view('auth.login');
-    }
-
-    public function register(Request $request)
-    {
-        $request->validate([
-            'tb_name' => 'required',
-            'tb_email' => 'required|email|unique:usermaster,email',
-            'tb_password' => 'required|min:6|confirmed',
-        ], [], [
-            'tb_name' => 'Name',
-            'tb_email' => 'Email',
-            'tb_password' => 'Password',
-        ]
-        );
-
-        $email = $request->input('tb_email');
-        $password = $request->input('tb_password');
-        $securePassword = securePassword($password, $email);
-
-        DB::table('usermaster')->insert([
-            'full_name' => $request->input('tb_name'),
-            'email' => $email,
-            'password' => $securePassword,
-            'is_admin' => 'N',
-            'status' => '1',
-            'created_at' => now(),
-        ]);
-
-        return redirect('/')
-            ->with('success', 'Registration Successful');
     }
 
     public function dashboard()
