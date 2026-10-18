@@ -117,6 +117,8 @@
                 </section>
 
             </main>
+
+            @include('layout.footer')
         </div>
     </div>
 @endsection

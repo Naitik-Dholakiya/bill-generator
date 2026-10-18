@@ -128,6 +128,8 @@
                     </iframe>
                 </div>
             </main>
+
+            @include('layout.footer')
         </div>
     </div>
 @endsection

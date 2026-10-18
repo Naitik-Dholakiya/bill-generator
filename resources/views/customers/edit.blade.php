@@ -211,6 +211,8 @@
 
             </main>
 
+            @include('layout.footer')
+
         </div>
         
 

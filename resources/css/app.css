@@ -3,10 +3,93 @@
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
-@source '..*.blade.php';
-@source '../**.js';
+@source '../**/*.blade.php';
+@source '../**/*.js';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
-    }  
+}
+
+html {
+    scrollbar-color: #a8b4c4 transparent;
+    scrollbar-width: thin;
+}
+
+html.dark {
+    scrollbar-color: #52525b transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 9999px;
+    background: #a8b4c4;
+    background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background-color: #718096;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+    }
+}
+
+@layer components {
+    .document-content h1,
+    .document-content h2,
+    .document-content h3 {
+        @apply mb-3 mt-8 font-semibold tracking-tight text-slate-900 dark:text-white;
+    }
+
+    .document-content h1 {
+        @apply text-2xl;
+    }
+
+    .document-content h2 {
+        @apply border-b border-slate-100 pb-2 text-xl dark:border-zinc-800;
+    }
+
+    .document-content h3 {
+        @apply text-base;
+    }
+
+    .document-content p {
+        @apply mb-4;
+    }
+
+    .document-content ul,
+    .document-content ol {
+        @apply mb-5 ml-6 list-disc space-y-2;
+    }
+
+    .document-content ol {
+        @apply list-decimal;
+    }
+
+    .document-content a {
+        @apply font-medium text-cyan-700 underline decoration-cyan-300 underline-offset-4 dark:text-cyan-300;
+    }
+
+    .document-content code {
+        @apply rounded bg-slate-100 px-1.5 py-0.5 text-[0.9em] dark:bg-zinc-800;
+    }
+
+    .document-content table {
+        @apply mb-5 block w-full overflow-x-auto text-left text-sm;
+    }
+
+    .document-content th,
+    .document-content td {
+        @apply border-b border-slate-200 px-3 py-2 dark:border-zinc-700;
+    }
+}

@@ -20,14 +20,40 @@ use App\Http\Controllers\invoiceGeneratorController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminUserController;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 Route::get('/welcome', function () {
     return view('welcome');
 });
 Route::get('/', [AuthController::class, 'showLogin'])->name('login.form');
 Route::post('/login', [AuthController::class, 'login'])->name('login');
+
+Route::get('/privacy-policy', function () {
+    return view('pages.document', [
+        'title' => 'Privacy policy',
+        'description' => 'How Billora workspace information is handled.',
+        'content' => Str::markdown(File::get(base_path('docs/PRIVACY-POLICY.md'))),
+    ]);
+})->name('privacy-policy');
+
+Route::get('/user-manual', function () {
+    return view('pages.document', [
+        'title' => 'User manual',
+        'description' => 'A practical guide to setting up and using your billing workspace.',
+        'content' => Str::markdown(File::get(base_path('docs/USER-MANUAL.md'))),
+    ]);
+})->name('user-manual');
+
+Route::get('/documentation', function () {
+    return view('pages.document', [
+        'title' => 'Documentation',
+        'description' => 'Application modules, architecture, and development workflow.',
+        'content' => Str::markdown(File::get(base_path('docs/TECHNICAL-DOCUMENTATION.md'))),
+    ]);
+})->name('documentation');
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('admin.auth')->group(function () {

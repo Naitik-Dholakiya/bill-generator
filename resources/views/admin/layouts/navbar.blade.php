@@ -1,7 +1,7 @@
 <header class="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 dark:border-zinc-800 dark:bg-zinc-900 sm:px-7">
     <div class="flex min-w-0 items-center gap-3">
-        <button id="adminMobileMenuButton" type="button" onclick="toggleAdminSidebar()" aria-label="Open admin navigation" aria-controls="adminSidebar" aria-expanded="false"
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-violet-500/20 dark:text-zinc-300 dark:hover:bg-zinc-800 md:hidden">
+        <button id="adminMobileMenuButton" type="button" onclick="toggleAdminSidebar()" aria-label="Open admin navigation" aria-controls="sidebar" aria-expanded="false"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-violet-500/20 dark:text-zinc-300 dark:hover:bg-zinc-800 lg:hidden">
             <i class="ti ti-menu-2 text-xl" aria-hidden="true"></i>
         </button>
         <div class="min-w-0">

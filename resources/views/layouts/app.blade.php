@@ -7,103 +7,19 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', config('app.name', 'Billing System'))</title>
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {}
-            }
-        }
-    </script>
-
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-        }
-
-        html {
-            scrollbar-width: thin;
-            scrollbar-color: #a8b4c4 transparent;
-        }
-
-        html.dark {
-            scrollbar-color: #52525b transparent;
-        }
-
-        * {
-            scrollbar-width: thin;
-            scrollbar-color: #a8b4c4 transparent;
-        }
-
-        *::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        *::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        *::-webkit-scrollbar-thumb {
-            border: 2px solid transparent;
-            border-radius: 9999px;
-            background-color: #a8b4c4;
-            background-clip: padding-box;
-        }
-
-        *::-webkit-scrollbar-thumb:hover {
-            background-color: #718096;
-        }
-
-        html.dark *,
-        .dark * {
-            scrollbar-color: #52525b transparent;
-        }
-
-        .dark *::-webkit-scrollbar-thumb {
-            background-color: #52525b;
-        }
-
-        .dark *::-webkit-scrollbar-thumb:hover {
-            background-color: #71717a;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            *,
-            *::before,
-            *::after {
-                scroll-behavior: auto !important;
-            }
-        }
-
-        /* Smooth Theme Transition */
-        *,
-        *::before,
-        *::after {
-            transition:
-                background-color 250ms ease,
-                border-color 250ms ease,
-                color 250ms ease,
-                fill 250ms ease,
-                stroke 250ms ease,
-                box-shadow 250ms ease;
-        }
-
-        .swal2-timer-progress-bar {
-            background: #accf9c !important;
-        }
-    </style>
+    <style>.swal2-timer-progress-bar{background:#accf9c!important}</style>
 
     @stack('styles')
 </head>
 
-<body class="h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-gray-100 overflow-hidden">
+<body class="h-screen overflow-hidden bg-gray-50 font-sans text-gray-900 dark:bg-zinc-950 dark:text-gray-100">
 
     @yield('content')
 
@@ -287,10 +203,27 @@
             btn?.setAttribute('aria-expanded', 'false');
         }
 
+        function toggleAccountMenu() {
+            const menu = document.getElementById('accountMenu');
+            const button = document.getElementById('accountMenuToggle');
+            if (!menu) return;
+
+            const opening = menu.classList.contains('hidden');
+            menu.classList.toggle('hidden', !opening);
+            button?.setAttribute('aria-expanded', String(opening));
+        }
+
+        function closeAccountMenu() {
+            document.getElementById('accountMenu')?.classList.add('hidden');
+            document.getElementById('accountMenuToggle')?.setAttribute('aria-expanded', 'false');
+        }
+
         // Close on outside click
         document.addEventListener('click', function(e) {
             const wrapper = document.getElementById('themeWrapper');
             if (wrapper && !wrapper.contains(e.target)) closeThemeMenu();
+            const accountWrapper = document.getElementById('accountMenuWrapper');
+            if (accountWrapper && !accountWrapper.contains(e.target)) closeAccountMenu();
         });
 
         // Close on Escape
@@ -298,6 +231,7 @@
             if (e.key === 'Escape') {
                 closeLogoutModal();
                 closeThemeMenu();
+                closeAccountMenu();
                 closeMobileSidebar();
             }
 

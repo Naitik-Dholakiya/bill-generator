@@ -50,14 +50,33 @@
         </div>
     </div>
 
-    <a href="{{ route('settings') }}" aria-label="Account settings for {{ $navName }}"
-        class="group flex h-10 shrink-0 items-center gap-2 rounded-xl p-1 pr-1.5 transition hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-cyan-500/20 dark:hover:bg-zinc-800 sm:pr-2">
-        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-indigo-600 text-[11px] font-bold text-white">
-            {{ $navInitials ?: 'U' }}
-        </span>
-        <span class="hidden max-w-32 truncate text-sm font-medium text-slate-700 group-hover:text-slate-900 sm:block dark:text-zinc-200 dark:group-hover:text-white">
-            {{ $navName }}
-        </span>
-        <i class="ti ti-chevron-down hidden text-xs text-slate-400 sm:block" aria-hidden="true"></i>
-    </a>
+    <div class="relative shrink-0" id="accountMenuWrapper">
+        <button id="accountMenuToggle" type="button" onclick="toggleAccountMenu()" aria-label="Account menu for {{ $navName }}"
+            aria-controls="accountMenu" aria-expanded="false"
+            class="flex h-10 items-center gap-2 rounded-xl p-1 pr-1.5 transition hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-cyan-500/20 dark:hover:bg-zinc-800 sm:pr-2">
+            <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-indigo-600 text-[11px] font-bold text-white">
+                {{ $navInitials ?: 'U' }}
+            </span>
+            <span class="hidden max-w-32 truncate text-sm font-medium text-slate-700 sm:block dark:text-zinc-200">
+                {{ $navName }}
+            </span>
+            <i class="ti ti-chevron-down hidden text-xs text-slate-400 sm:block" aria-hidden="true"></i>
+        </button>
+
+        <div id="accountMenu" role="menu" aria-labelledby="accountMenuToggle"
+            class="absolute right-0 top-full z-50 mt-2 hidden w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10 dark:border-zinc-700 dark:bg-zinc-900">
+            <div class="border-b border-slate-100 px-3 py-2.5 dark:border-zinc-800">
+                <p class="truncate text-sm font-semibold text-slate-800 dark:text-zinc-100">{{ $navName }}</p>
+                <p class="text-xs text-slate-500 dark:text-zinc-400">Workspace account</p>
+            </div>
+            <a href="{{ route('settings') }}" role="menuitem"
+                class="flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm text-slate-700 transition hover:bg-slate-100 dark:text-zinc-200 dark:hover:bg-zinc-800">
+                <i class="ti ti-settings text-base text-slate-400" aria-hidden="true"></i> Settings
+            </a>
+            <button type="button" role="menuitem" onclick="submitLogout()"
+                class="flex min-h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-sm text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30">
+                <i class="ti ti-logout text-base" aria-hidden="true"></i> Log out
+            </button>
+        </div>
+    </div>
 </header>

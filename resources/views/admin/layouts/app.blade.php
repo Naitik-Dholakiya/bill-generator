@@ -35,7 +35,7 @@
 </head>
 <body class="h-screen overflow-hidden bg-slate-50 font-sans text-slate-900 dark:bg-zinc-950 dark:text-zinc-100">
     <div class="flex h-full">
-        @include('admin.layouts.sidebar')
+        @include('layout.sidebar')
         <div class="flex min-w-0 flex-1 flex-col">
             @include('admin.layouts.navbar')
             <main class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-7 lg:p-9">
@@ -43,11 +43,9 @@
                     @yield('content')
                 </div>
             </main>
-            @include('admin.layouts.footer')
+            @include('layout.footer')
         </div>
     </div>
-    <div id="adminSidebarOverlay" aria-hidden="true" onclick="closeAdminSidebar()"
-        class="invisible fixed inset-0 z-40 bg-slate-950/50 opacity-0 backdrop-blur-[2px] transition-opacity duration-300 md:hidden"></div>
     @if (session('success') || session('error') || $errors->any())
         <script>
             document.addEventListener('DOMContentLoaded', () => {
@@ -131,12 +129,12 @@
         }
 
         function setAdminSidebarOpen(isOpen) {
-            const sidebar = document.getElementById('adminSidebar');
-            const overlay = document.getElementById('adminSidebarOverlay');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
             const menuButton = document.getElementById('adminMobileMenuButton');
             if (!sidebar || !overlay) return;
 
-            if (window.matchMedia('(min-width: 768px)').matches) isOpen = false;
+            if (window.matchMedia('(min-width: 1024px)').matches) isOpen = false;
             sidebar.classList.toggle('-translate-x-full', !isOpen);
             overlay.classList.toggle('invisible', !isOpen);
             overlay.classList.toggle('opacity-0', !isOpen);
@@ -146,7 +144,7 @@
         }
 
         function toggleAdminSidebar() {
-            const sidebar = document.getElementById('adminSidebar');
+            const sidebar = document.getElementById('sidebar');
             setAdminSidebarOpen(sidebar?.classList.contains('-translate-x-full'));
         }
 
@@ -170,7 +168,7 @@
             if (event.key === 'Escape') closeAdminSidebar();
         });
         window.addEventListener('resize', () => {
-            if (window.matchMedia('(min-width: 768px)').matches) closeAdminSidebar();
+            if (window.matchMedia('(min-width: 1024px)').matches) closeAdminSidebar();
         });
     </script>
 </body>

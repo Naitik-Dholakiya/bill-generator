@@ -14,10 +14,38 @@
     $prodCount  = $kpis['products_total']      ?? null;
     $invCount   = $kpis['invoices_total']       ?? null;
 
-    // Fresh-install checklist only shows while the business genuinely has
-    // nothing recorded yet — not just while a query is unwired (null).
-    $isFreshInstall = collect([$custCount, $suppCount, $prodCount, $invCount])
-        ->every(fn ($v) => $v === 0);
+    $setupSteps = [
+        [
+            'title' => 'Add your first customer',
+            'description' => 'Save a customer to bill.',
+            'icon' => 'ti-users',
+            'url' => route('createCustomer'),
+            'complete' => ($custCount ?? 0) > 0,
+        ],
+        [
+            'title' => 'Add a supplier',
+            'description' => 'Keep supplier details handy.',
+            'icon' => 'ti-truck-delivery',
+            'url' => route('createSupplier'),
+            'complete' => ($suppCount ?? 0) > 0,
+        ],
+        [
+            'title' => 'Set up your products',
+            'description' => 'Add items you sell.',
+            'icon' => 'ti-package',
+            'url' => route('products.create'),
+            'complete' => ($prodCount ?? 0) > 0,
+        ],
+        [
+            'title' => 'Create your first invoice',
+            'description' => 'Start billing your customers.',
+            'icon' => 'ti-file-invoice',
+            'url' => route('invoice.create'),
+            'complete' => ($invCount ?? 0) > 0,
+        ],
+    ];
+    $completedSetupSteps = collect($setupSteps)->where('complete', true)->count();
+    $setupProgress = (int) round(($completedSetupSteps / count($setupSteps)) * 100);
 
     $collectedTotal = $kpis['collected_total'] ?? null;
     $revenueTotalRaw = $kpis['revenue_total'] ?? null;
@@ -26,7 +54,7 @@
         : null;
 @endphp
 
-<div class="flex h-screen overflow-hidden bg-gray-50 dark:bg-zinc-950">
+<div class="flex h-screen overflow-hidden bg-slate-50 dark:bg-zinc-950">
 
     @include('layout.sidebar')
 
@@ -34,117 +62,84 @@
 
         @include('layout.navbar')
 
-        <main class="flex-1 overflow-y-auto p-5 space-y-5">
+        <main class="flex-1 space-y-6 overflow-y-auto p-4 sm:p-6 lg:p-8">
 
-            {{-- ============================== Welcome / range / quick actions ============================== --}}
-            <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-6
-                        flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-xl font-medium">
-                        Welcome back,
-                        <span class="bg-gradient-to-r from-cyan-500 to-purple-600 bg-clip-text text-transparent">
-                            {{ request()->cookie('CSGO') ?? 'Admin' }}
-                        </span>
-                    </h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Business snapshot for {{ now()->format('d M Y') }} ·
-                        {{ $num($custCount) ?? '0' }} customers ·
-                        {{ $num($prodCount) ?? '0' }} active products ·
-                        {{ $num($suppCount) ?? '0' }} suppliers
-                    </p>
-                </div>
-                <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
-                    <select class="text-xs bg-gray-100 dark:bg-zinc-800 border-0 rounded-xl px-3 py-2.5
-                                   text-gray-600 dark:text-gray-300 outline-none cursor-pointer" aria-label="Range">
-                        <option>This month</option>
-                        <option>Last 30 days</option>
-                        <option>This quarter</option>
-                        <option>This year</option>
-                    </select>
-                    <button class="inline-flex items-center gap-2 px-4 py-2 text-sm border border-gray-200 dark:border-zinc-700
-                                   rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                        <i class="ti ti-download text-base" aria-hidden="true"></i> Export
-                    </button>
-                    <a href="{{ route('createCustomer') }}"
-                       class="inline-flex items-center gap-2 px-3.5 py-2 text-sm border border-gray-200 dark:border-zinc-700
-                              rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                        <i class="ti ti-user-plus text-base" aria-hidden="true"></i> Customer
-                    </a>
-                    <a href="{{ route('createSupplier') }}"
-                       class="inline-flex items-center gap-2 px-3.5 py-2 text-sm border border-gray-200 dark:border-zinc-700
-                              rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                        <i class="ti ti-truck-delivery text-base" aria-hidden="true"></i> Supplier
-                    </a>
-                    <a href="{{ route('products.create') }}"
-                       class="inline-flex items-center gap-2 px-3.5 py-2 text-sm border border-gray-200 dark:border-zinc-700
-                              rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                        <i class="ti ti-package text-base" aria-hidden="true"></i> Product
-                    </a>
-                    <a href="{{ route('invoice.create') }}"
-                       class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-xl
-                              bg-gradient-to-r from-cyan-500 to-purple-600 hover:opacity-90 transition-opacity">
-                        <i class="ti ti-plus text-base" aria-hidden="true"></i> New invoice
-                    </a>
-                </div>
-            </div>
-
-            {{-- ============================== Onboarding checklist (fresh install only) ============================== --}}
-            @if($isFreshInstall)
-                <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-6">
-                    <div class="flex items-center justify-between mb-1">
-                        <h3 class="font-medium text-base">Set up your business</h3>
-                        <span class="text-xs text-gray-400">0 of 4 done</span>
+            <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="flex flex-col gap-6 p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="max-w-2xl">
+                        <p class="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-400">
+                            Business overview <span class="px-1 text-slate-300 dark:text-zinc-600">/</span> {{ now()->format('l, d M Y') }}
+                        </p>
+                        <h2 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+                            Welcome back, {{ request()->cookie('CSGO') ?? 'Admin' }}
+                        </h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-zinc-400">
+                            Keep your day moving with a clear view of your billing, customers, products, and suppliers.
+                        </p>
+                        <div class="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-slate-500 dark:text-zinc-400">
+                            <span><i class="ti ti-users mr-1 text-cyan-600 dark:text-cyan-400" aria-hidden="true"></i>{{ $num($custCount) ?? '0' }} customers</span>
+                            <span><i class="ti ti-package mr-1 text-violet-600 dark:text-violet-400" aria-hidden="true"></i>{{ $num($prodCount) ?? '0' }} products</span>
+                            <span><i class="ti ti-truck-delivery mr-1 text-emerald-600 dark:text-emerald-400" aria-hidden="true"></i>{{ $num($suppCount) ?? '0' }} suppliers</span>
+                        </div>
                     </div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
-                        Nothing is recorded yet. Add these four things and every chart below fills in with your real numbers.
-                    </p>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                        <a href="{{ route('createCustomer') }}"
-                           class="flex items-start gap-3 p-4 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700
-                                  hover:border-cyan-400 dark:hover:border-cyan-500 transition-colors">
-                            <span class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
-                                <i class="ti ti-users text-sm text-purple-600 dark:text-purple-400" aria-hidden="true"></i>
-                            </span>
-                            <div>
-                                <p class="text-sm font-medium">Add a customer</p>
-                                <p class="text-xs text-gray-400 mt-0.5">Who you'll bill</p>
-                            </div>
-                        </a>
-                        <a href="{{ route('createSupplier') }}"
-                           class="flex items-start gap-3 p-4 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700
-                                  hover:border-cyan-400 dark:hover:border-cyan-500 transition-colors">
-                            <span class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
-                                <i class="ti ti-truck-delivery text-sm text-emerald-600 dark:text-emerald-400" aria-hidden="true"></i>
-                            </span>
-                            <div>
-                                <p class="text-sm font-medium">Add a supplier</p>
-                                <p class="text-xs text-gray-400 mt-0.5">Who you buy stock from</p>
-                            </div>
-                        </a>
+                    <div class="flex shrink-0 flex-wrap gap-3">
                         <a href="{{ route('products.create') }}"
-                           class="flex items-start gap-3 p-4 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700
-                                  hover:border-cyan-400 dark:hover:border-cyan-500 transition-colors">
-                            <span class="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center flex-shrink-0">
-                                <i class="ti ti-package text-sm text-cyan-600 dark:text-cyan-400" aria-hidden="true"></i>
-                            </span>
-                            <div>
-                                <p class="text-sm font-medium">Add a product</p>
-                                <p class="text-xs text-gray-400 mt-0.5">What you sell</p>
-                            </div>
+                           class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 dark:focus:ring-zinc-700">
+                            <i class="ti ti-package text-base" aria-hidden="true"></i> Add product
                         </a>
                         <a href="{{ route('invoice.create') }}"
-                           class="flex items-start gap-3 p-4 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700
-                                  hover:border-cyan-400 dark:hover:border-cyan-500 transition-colors">
-                            <span class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
-                                <i class="ti ti-file-invoice text-sm text-amber-600 dark:text-amber-400" aria-hidden="true"></i>
-                            </span>
-                            <div>
-                                <p class="text-sm font-medium">Create an invoice</p>
-                                <p class="text-xs text-gray-400 mt-0.5">Start billing</p>
-                            </div>
+                           class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-cyan-700 px-4 text-sm font-semibold text-white shadow-sm shadow-cyan-900/10 transition hover:bg-cyan-800 focus:outline-none focus:ring-4 focus:ring-cyan-500/25 dark:bg-cyan-600 dark:hover:bg-cyan-500">
+                            <i class="ti ti-plus text-base" aria-hidden="true"></i> Create invoice
                         </a>
                     </div>
                 </div>
+            </section>
+
+            @if($completedSetupSteps < count($setupSteps))
+                <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-7" aria-labelledby="setup-guide-title">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-400">Getting started</p>
+                            <h3 id="setup-guide-title" class="mt-1 text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Get your business set up</h3>
+                            <p class="mt-1 text-sm text-slate-500 dark:text-zinc-400">Follow these steps to get your workspace ready for everyday billing.</p>
+                        </div>
+                        <span class="inline-flex w-fit items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:bg-zinc-800 dark:text-zinc-300">
+                            {{ $completedSetupSteps }} of {{ count($setupSteps) }} complete
+                        </span>
+                    </div>
+                    <div class="mt-5 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-zinc-800" role="progressbar" aria-label="Workspace setup progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $setupProgress }}">
+                        <div class="h-full rounded-full bg-cyan-600 transition-[width] duration-500 dark:bg-cyan-500" style="width: {{ $setupProgress }}%"></div>
+                    </div>
+                    <ol class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        @foreach ($setupSteps as $index => $step)
+                            <li>
+                                @if ($step['complete'])
+                                    <div class="flex h-full items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+                                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+                                            <i class="ti ti-check text-lg" aria-hidden="true"></i>
+                                        </span>
+                                        <span>
+                                            <span class="block text-sm font-semibold text-slate-800 dark:text-zinc-100">{{ $step['title'] }}</span>
+                                            <span class="mt-1 block text-xs text-emerald-700 dark:text-emerald-400">Completed</span>
+                                        </span>
+                                    </div>
+                                @else
+                                    <a href="{{ $step['url'] }}" class="group flex h-full items-start gap-3 rounded-2xl border border-slate-200 p-4 transition hover:border-cyan-300 hover:bg-cyan-50/40 focus:outline-none focus:ring-4 focus:ring-cyan-500/15 dark:border-zinc-700 dark:hover:border-cyan-800 dark:hover:bg-cyan-950/20">
+                                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300">
+                                            <i class="ti {{ $step['icon'] }} text-lg" aria-hidden="true"></i>
+                                        </span>
+                                        <span class="min-w-0">
+                                            <span class="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Step {{ $index + 1 }}</span>
+                                            <span class="mt-0.5 block text-sm font-semibold text-slate-800 group-hover:text-cyan-800 dark:text-zinc-100 dark:group-hover:text-cyan-300">{{ $step['title'] }}</span>
+                                            <span class="mt-1 block text-xs text-slate-500 dark:text-zinc-400">{{ $step['description'] }}</span>
+                                        </span>
+                                        <i class="ti ti-arrow-up-right ml-auto shrink-0 text-sm text-slate-400 transition group-hover:text-cyan-700 dark:group-hover:text-cyan-300" aria-hidden="true"></i>
+                                    </a>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ol>
+                </section>
             @endif
 
             {{-- ============================== KPI grid ============================== --}}

@@ -436,6 +436,8 @@
                 </form>
 
             </main>
+
+            @include('layout.footer')
         </div>
     </div>
 

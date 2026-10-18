@@ -59,6 +59,8 @@
                     @endif
                 </section>
             </main>
+
+            @include('layout.footer')
         </div>
     </div>
     <script>
