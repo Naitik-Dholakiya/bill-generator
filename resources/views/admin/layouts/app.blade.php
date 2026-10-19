@@ -45,6 +45,96 @@
             @include('layout.footer')
         </div>
     </div>
+    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
+    <div id="logoutModal" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle"
+        aria-describedby="logoutModalDescription"
+        class="fixed inset-0 z-[80] hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+        onclick="if (event.target === this) closeLogoutModal()">
+        <div class="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/20 dark:border-zinc-700 dark:bg-zinc-900">
+            <div class="relative px-6 pb-5 pt-7 text-center sm:px-8">
+                <button type="button" onclick="closeLogoutModal()" aria-label="Close logout confirmation"
+                    class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-4 focus:ring-slate-200 dark:hover:bg-zinc-800 dark:hover:text-white dark:focus:ring-zinc-700">
+                    <i class="ti ti-x text-lg" aria-hidden="true"></i>
+                </button>
+
+                <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600 ring-8 ring-red-50/60 dark:bg-red-950/50 dark:text-red-400 dark:ring-red-950/20">
+                    <i class="ti ti-logout text-3xl" aria-hidden="true"></i>
+                </div>
+
+                <p class="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-red-600 dark:text-red-400">
+                    End this session
+                </p>
+                <h2 id="logoutModalTitle" class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
+                    Are you sure you want to log out?
+                </h2>
+                <p id="logoutModalDescription" class="mx-auto mt-2 max-w-xs text-sm leading-6 text-slate-500 dark:text-zinc-400">
+                    You’ll be signed out of the administration console and need to sign in again to manage workspace accounts.
+                </p>
+            </div>
+
+            <div class="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50/80 p-5 dark:border-zinc-800 dark:bg-zinc-950/40 sm:flex-row sm:justify-center sm:px-8 sm:py-5">
+                <button id="cancelLogoutButton" type="button" onclick="closeLogoutModal()"
+                    class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-slate-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 dark:focus:ring-zinc-700">
+                    Stay signed in
+                </button>
+                <button type="button" onclick="submitLogout()"
+                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white shadow-sm shadow-red-600/20 transition hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-500/25">
+                    <i class="ti ti-logout text-base" aria-hidden="true"></i>
+                    Log out
+                </button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let logoutModalTrigger = null;
+
+        function openLogoutModal(event) {
+            event.preventDefault();
+
+            const modal = document.getElementById('logoutModal');
+            if (!modal) return;
+
+            logoutModalTrigger = event.currentTarget;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('cancelLogoutButton')?.focus();
+        }
+
+        function closeLogoutModal() {
+            const modal = document.getElementById('logoutModal');
+            if (!modal) return;
+
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            logoutModalTrigger?.focus();
+            logoutModalTrigger = null;
+        }
+
+        function submitLogout() {
+            document.getElementById('logout-form')?.submit();
+        }
+
+        document.addEventListener('keydown', function (event) {
+            const modal = document.getElementById('logoutModal');
+            if (!modal || modal.classList.contains('hidden')) return;
+
+            if (event.key === 'Escape') {
+                closeLogoutModal();
+            } else if (event.key === 'Tab') {
+                const focusable = [...modal.querySelectorAll('button:not([disabled])')];
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+
+                if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault();
+                    last?.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault();
+                    first?.focus();
+                }
+            }
+        });
+    </script>
     @if (session('success') || session('error') || $errors->any())
         <script>
             document.addEventListener('DOMContentLoaded', () => {
@@ -103,28 +193,6 @@
 
         function toggleAdminTheme() {
             setAdminTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark');
-        }
-
-        function confirmAdminLogout(event) {
-            event.preventDefault();
-            Swal.fire({
-                title: 'Sign out of administration?',
-                text: 'You will need to sign in again to manage workspace accounts.',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Sign out',
-                cancelButtonText: 'Stay signed in',
-                confirmButtonColor: '#dc2626',
-                cancelButtonColor: '#64748b',
-                reverseButtons: true,
-                focusCancel: true,
-                background: document.documentElement.classList.contains('dark') ? '#18181b' : '#ffffff',
-                color: document.documentElement.classList.contains('dark') ? '#f4f4f5' : '#18181b',
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    document.getElementById('adminLogoutForm').submit();
-                }
-            });
         }
 
         function setAdminSidebarOpen(isOpen) {

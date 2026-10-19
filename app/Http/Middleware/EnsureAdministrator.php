@@ -21,7 +21,7 @@ class EnsureAdministrator
             : null;
 
         if ($admin === null) {
-            return redirect('/');
+            return redirect()->guest(route('login.form'));
         }
 
         $request->attributes->set('authenticated_admin', $admin);

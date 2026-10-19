@@ -265,6 +265,8 @@
                         <input
                             type="checkbox"
                             name="remember"
+                            value="1"
+                            @checked(old('remember'))
                             class="h-4 w-4 rounded border-white/20 bg-white/10 text-cyan-500 focus:ring-cyan-400"
                         >
                         Keep me signed in on this device

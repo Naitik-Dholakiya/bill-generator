@@ -34,7 +34,8 @@ class AuthController extends Controller
 
     public function logout()
     {
-        session()->flush();
+        session()->invalidate();
+        session()->regenerateToken();
         Cookie::queue(Cookie::forget('GTA'));
         Cookie::queue(Cookie::forget('CSGO'));
 
@@ -48,6 +49,7 @@ class AuthController extends Controller
             $validated = $request->validate([
                 'tb_email' => ['required', 'email', 'max:150'],
                 'tb_password' => ['required', 'string'],
+                'remember' => ['sometimes', 'boolean'],
             ], [], [
                 'tb_email' => 'Email',
                 'tb_password' => 'Password',
@@ -82,10 +84,13 @@ class AuthController extends Controller
                     ->withInput();
             }
 
-            Cookie::queue('GTA', $user->user_id, 60 * 24 * 30);
-            Cookie::queue('CSGO', $user->full_name, 60 * 24 * 30);
+            $request->session()->regenerate();
 
-            return redirect()->route($user->is_admin === 'Y' ? 'admin.dashboard' : 'dashboard')
+            $cookieLifetime = $request->boolean('remember') ? 60 * 24 * 30 : 0;
+            Cookie::queue('GTA', $user->user_id, $cookieLifetime);
+            Cookie::queue('CSGO', $user->full_name, $cookieLifetime);
+
+            return redirect()->intended(route($user->is_admin === 'Y' ? 'admin.dashboard' : 'dashboard'))
                 ->with('success', 'Login successful.');
 
         } catch (\Exception $e) {

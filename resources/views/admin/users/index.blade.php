@@ -22,12 +22,29 @@
     </div>
 
     <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <form method="GET" action="{{ route('admin.users.index') }}" class="flex flex-col gap-3 border-b border-slate-100 p-4 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <p class="text-sm text-slate-500 dark:text-zinc-400">{{ number_format($users->total()) }} {{ Str::plural('account', $users->total()) }}</p>
-            <div class="flex gap-2">
+        <form method="GET" action="{{ route('admin.users.index') }}" class="flex flex-col gap-3 border-b border-slate-100 p-4 dark:border-zinc-800 sm:px-6">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm text-slate-500 dark:text-zinc-400">{{ number_format($users->total()) }} {{ Str::plural('account', $users->total()) }}</p>
+                <div class="flex flex-col gap-2 sm:flex-row">
                 <input type="search" name="q" value="{{ request('q') }}" aria-label="Search accounts" placeholder="Search name, email, business"
-                    class="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/10 dark:border-zinc-700 dark:bg-zinc-950 sm:w-72">
-                <button class="rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">Search</button>
+                    class="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/10 dark:border-zinc-700 dark:bg-zinc-950 sm:w-56">
+                    <select name="role" aria-label="Filter by role" class="min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950">
+                        <option value="">All roles</option>
+                        <option value="N" @selected(request('role') === 'N')>Users</option>
+                        <option value="Y" @selected(request('role') === 'Y')>Administrators</option>
+                    </select>
+                    <select name="status" aria-label="Filter by account status" class="min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950">
+                        <option value="">All statuses</option>
+                        <option value="1" @selected(request('status') === '1')>Active</option>
+                        <option value="0" @selected(request('status') === '0')>Inactive</option>
+                        <option value="2" @selected(request('status') === '2')>Blocked</option>
+                        <option value="attention" @selected(request('status') === 'attention')>Needs attention</option>
+                    </select>
+                    <button class="rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">Apply</button>
+                    @if (request()->hasAny(['q', 'role', 'status']))
+                        <a href="{{ route('admin.users.index') }}" class="inline-flex min-h-10 items-center justify-center rounded-xl px-3 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800">Clear</a>
+                    @endif
+                </div>
             </div>
         </form>
 

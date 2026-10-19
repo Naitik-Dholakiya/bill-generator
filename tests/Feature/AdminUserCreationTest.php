@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Mail\NewUserCredentials;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
@@ -205,5 +206,64 @@ class AdminUserCreationTest extends TestCase
             ])
             ->assertRedirect(route('admin.users.index'))
             ->assertSessionHas('error', 'Account created, but credentials email was not sent. Mailer error: SMTP connection refused');
+    }
+
+    public function test_admin_dashboard_shows_account_health_and_recent_inactive_accounts(): void
+    {
+        $adminId = $this->createAccount('Administrator', 'admin@example.com', 'Y');
+        $this->createAccount('Active User', 'active@example.com');
+        $this->createAccount('Blocked User', 'blocked@example.com', 'N', '2', now()->subDays(45));
+        $this->createAccount('Inactive User', 'inactive@example.com', 'N', '0', now()->subDays(60));
+
+        $response = $this->withCookie('GTA', (string) $adminId)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Workspaces needing attention')
+            ->assertSee('blocked@example.com')
+            ->assertSee('inactive@example.com')
+            ->assertSee('Review all');
+
+        $this->assertSame([
+            'users' => 3,
+            'active' => 1,
+            'attention' => 2,
+            'new' => 1,
+            'jewelry' => 0,
+            'admins' => 1,
+        ], $response->viewData('metrics'));
+    }
+
+    public function test_admin_can_filter_accounts_by_role_and_attention_status(): void
+    {
+        $adminId = $this->createAccount('Administrator', 'admin@example.com', 'Y');
+        $this->createAccount('Active User', 'active@example.com');
+        $this->createAccount('Blocked User', 'blocked@example.com', 'N', '2');
+        $this->createAccount('Inactive User', 'inactive@example.com', 'N', '0');
+
+        $this->withCookie('GTA', (string) $adminId)
+            ->get(route('admin.users.index', ['role' => 'N', 'status' => 'attention']))
+            ->assertOk()
+            ->assertSee('blocked@example.com')
+            ->assertSee('inactive@example.com')
+            ->assertDontSee('>active@example.com<')
+            ->assertDontSee('admin@example.com');
+    }
+
+    private function createAccount(
+        string $name,
+        string $email,
+        string $role = 'N',
+        string $status = '1',
+        ?Carbon $createdAt = null,
+    ): int {
+        return DB::table('usermaster')->insertGetId([
+            'full_name' => $name,
+            'email' => $email,
+            'password' => securePassword('Password123!', $email),
+            'is_admin' => $role,
+            'status' => $status,
+            'created_at' => $createdAt ?? now(),
+            'updated_at' => $createdAt ?? now(),
+        ]);
     }
 }

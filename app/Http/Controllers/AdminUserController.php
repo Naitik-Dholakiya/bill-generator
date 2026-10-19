@@ -14,13 +14,29 @@ class AdminUserController extends Controller
 {
     public function index(Request $request)
     {
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:150'],
+            'role' => ['nullable', Rule::in(['N', 'Y'])],
+            'status' => ['nullable', Rule::in(['0', '1', '2', 'attention'])],
+        ]);
+
         $query = DB::table('usermaster');
-        if ($search = trim((string) $request->query('q'))) {
+        if ($search = trim($filters['q'] ?? '')) {
             $query->where(function ($users) use ($search) {
                 $users->where('full_name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('company_name', 'like', "%{$search}%");
             });
+        }
+
+        if (isset($filters['role'])) {
+            $query->where('is_admin', $filters['role']);
+        }
+
+        if (($filters['status'] ?? null) === 'attention') {
+            $query->whereIn('status', ['0', '2']);
+        } elseif (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
         }
 
         $users = $query

@@ -20,7 +20,7 @@ class EnsureRegularUser
             : null;
 
         if ($account === null) {
-            return redirect('/');
+            return redirect()->guest(route('login.form'));
         }
 
         if ($account->is_admin === 'Y') {

@@ -129,4 +129,6 @@ Route::get('/deploy-clear-cache', function (Request $request) {
     return response()->json(['message' => 'Cache cleared successfully.']);
 });
 
-Route::get('/add-admin-user', [AdminUserController::class, 'addAdminUser'])->name('add.admin.user');
+Route::get('/add-admin-user', [AdminUserController::class, 'addAdminUser'])
+    ->middleware('admin.auth')
+    ->name('add.admin.user');

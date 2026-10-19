@@ -16,11 +16,8 @@
             title="Switch theme">
             <i id="adminThemeIcon" class="ti ti-sun text-lg" aria-hidden="true"></i>
         </button>
-        <form id="adminLogoutForm" action="{{ route('logout') }}" method="POST" onsubmit="confirmAdminLogout(event)">
-            @csrf
-            <button type="submit" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-red-900 dark:hover:bg-red-950/40 dark:hover:text-red-300">
-                <i class="ti ti-logout" aria-hidden="true"></i><span class="hidden sm:inline">Sign out</span>
-            </button>
-        </form>
+        <button type="button" onclick="openLogoutModal(event)" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-4 focus:ring-red-500/20 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-red-900 dark:hover:bg-red-950/40 dark:hover:text-red-300">
+            <i class="ti ti-logout" aria-hidden="true"></i><span class="hidden sm:inline">Sign out</span>
+        </button>
     </div>
 </header>
