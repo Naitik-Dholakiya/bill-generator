@@ -34,13 +34,13 @@ Stock movements/quantity ledger and supplier bills/vouchers are future modules. 
 | `admin.*` | Administrator workspace and account management |
 | `privacy-policy`, `user-manual`, `documentation` | Public information pages rendered from `docs/` Markdown |
 
-Route definitions are in `routes/web.php`. User-facing operations are protected by the `user.auth` middleware; administration uses `admin.auth`.
+Route definitions are in `routes/web.php`. User-facing operations are protected by the `user.auth` middleware; administration uses `admin.auth`. ID-based customer, supplier, product, and invoice routes also use `resource.owner`, which verifies the record's `created_by` matches the authenticated workspace before allowing access.
 
 ## Data model
 
 Core tables include `usermaster`, `customermaster`, `suppliermaster`, `categorymaster`, `productmaster`, `invoicemaster`, and `invoice_items`. Laravel cache and queue tables are also used by the framework. See `database/migrations/` for the authoritative schema and migration history.
 
-Business rows are associated with a workspace/user identifier. Preserve these ownership filters in new queries and authorize record IDs against the current workspace before changing data.
+Business rows are associated with a workspace/user identifier. Preserve these ownership filters in new queries and apply `resource.owner` to new ID-based routes so changing a URL ID cannot expose or modify another workspace's records. Unauthorized or missing IDs return 404.
 
 ## Local development
 

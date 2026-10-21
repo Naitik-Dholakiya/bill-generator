@@ -27,6 +27,8 @@ class EnsureRegularUser
             return redirect()->route('admin.dashboard');
         }
 
+        $request->attributes->set('authenticated_user_id', $account->user_id);
+
         return $next($request);
     }
 }

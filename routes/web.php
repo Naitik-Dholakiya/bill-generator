@@ -83,36 +83,53 @@ Route::middleware('user.auth')->group(function () {
     Route::get('/customers/dashboard', [customerController::class, 'index'])->name('customers.index');
     Route::get('/customers/create', [customerController::class,'createCustomer'])->name('createCustomer');
     Route::post('/customers/create', [customerController::class,'createCustomerPost'])->name('createCustomerPost');
-    Route::get('/customer/view/{id}', [customerController::class, 'viewCustomer'])->name('viewCustomer');
-    Route::get('/customer/edit/{id}', [customerController::class, 'editCustomer'])->name('editCustomer');
-    Route::post('/customer/edit/{id}', [customerController::class, 'editCustomerPost'])->name('editCustomerPost');
-    Route::delete('/customer/delete/{id}', [customerController::class, 'deleteCustomer'])->name('deleteCustomer');
+    Route::get('/customer/view/{id}', [customerController::class, 'viewCustomer'])
+        ->whereNumber('id')->middleware('resource.owner:customermaster,customer_id,id')->name('viewCustomer');
+    Route::get('/customer/edit/{id}', [customerController::class, 'editCustomer'])
+        ->whereNumber('id')->middleware('resource.owner:customermaster,customer_id,id')->name('editCustomer');
+    Route::post('/customer/edit/{id}', [customerController::class, 'editCustomerPost'])
+        ->whereNumber('id')->middleware('resource.owner:customermaster,customer_id,id')->name('editCustomerPost');
+    Route::delete('/customer/delete/{id}', [customerController::class, 'deleteCustomer'])
+        ->whereNumber('id')->middleware('resource.owner:customermaster,customer_id,id')->name('deleteCustomer');
 
     Route::get('/suppliers/dashboard', [supplierController::class, 'index'])->name('suppliers.index');
     Route::get('/suppliers/create', [supplierController::class,'createSupplier'])->name('createSupplier');
     Route::post('/suppliers/create', [supplierController::class,'createSupplierPost'])->name('createSupplierPost');
-    Route::get('/supplier/view/{id}', [supplierController::class, 'viewSupplier'])->name('supplier.view');
-    Route::get('/supplier/edit/{id}', [supplierController::class, 'editSupplier'])->name('supplier.edit');
-    Route::put('/supplier/edit/{id}', [supplierController::class, 'editSupplierPost'])->name('editSupplierPost');
-    Route::delete('/supplier/delete/{id}', [supplierController::class, 'deleteSupplier'])->name('supplier.delete');
+    Route::get('/supplier/view/{id}', [supplierController::class, 'viewSupplier'])
+        ->whereNumber('id')->middleware('resource.owner:suppliermaster,supplier_id,id')->name('supplier.view');
+    Route::get('/supplier/edit/{id}', [supplierController::class, 'editSupplier'])
+        ->whereNumber('id')->middleware('resource.owner:suppliermaster,supplier_id,id')->name('supplier.edit');
+    Route::put('/supplier/edit/{id}', [supplierController::class, 'editSupplierPost'])
+        ->whereNumber('id')->middleware('resource.owner:suppliermaster,supplier_id,id')->name('editSupplierPost');
+    Route::delete('/supplier/delete/{id}', [supplierController::class, 'deleteSupplier'])
+        ->whereNumber('id')->middleware('resource.owner:suppliermaster,supplier_id,id')->name('supplier.delete');
 
     Route::get('/products/dashboard', [productController::class, 'index'])->name('products.index');
     Route::get('/products/create', [productController::class,'createProduct'])->name('products.create');
     Route::post('/products/create', [productController::class, 'createProductPost'])->name('createProductPost');
-    Route::get('/product/view/{id}', [productController::class, 'viewProduct'])->name('products.view');
-    Route::get('/product/edit/{id}', [productController::class, 'editProduct'])->name('products.edit');
-    Route::put('/product/edit/{id}', [productController::class, 'editProductPost'])->name('editProductPost');
-    Route::delete('/product/delete/{id}', [productController::class, 'deleteProduct'])->name('products.delete');
+    Route::get('/product/view/{id}', [productController::class, 'viewProduct'])
+        ->whereNumber('id')->middleware('resource.owner:productmaster,product_id,id')->name('products.view');
+    Route::get('/product/edit/{id}', [productController::class, 'editProduct'])
+        ->whereNumber('id')->middleware('resource.owner:productmaster,product_id,id')->name('products.edit');
+    Route::put('/product/edit/{id}', [productController::class, 'editProductPost'])
+        ->whereNumber('id')->middleware('resource.owner:productmaster,product_id,id')->name('editProductPost');
+    Route::delete('/product/delete/{id}', [productController::class, 'deleteProduct'])
+        ->whereNumber('id')->middleware('resource.owner:productmaster,product_id,id')->name('products.delete');
     Route::post('/category/ajax/store', [productController::class, 'storeAjaxCategory'])->name('category.store.ajax');
 
     Route::get('/invoice/dashboard', [invoiceController::class, 'index'])->name('invoice.index');
     Route::get('/invoice/create', [invoiceController::class, 'create'])->name('invoice.create');
-    Route::get('/invoice/{invoice}', [invoiceController::class, 'view'])->name('invoice.view');
-    Route::get('/invoice/{invoice}/edit', [invoiceController::class, 'edit'])->name('invoice.edit');
-    Route::put('/invoice/{invoice}', [invoiceController::class, 'update'])->name('invoice.update');
-    Route::delete('/invoice/{invoice}', [invoiceController::class, 'delete'])->name('invoice.delete');
+    Route::get('/invoice/{invoice}', [invoiceController::class, 'view'])
+        ->whereNumber('invoice')->middleware('resource.owner:invoicemaster,invoice_id,invoice')->name('invoice.view');
+    Route::get('/invoice/{invoice}/edit', [invoiceController::class, 'edit'])
+        ->whereNumber('invoice')->middleware('resource.owner:invoicemaster,invoice_id,invoice')->name('invoice.edit');
+    Route::put('/invoice/{invoice}', [invoiceController::class, 'update'])
+        ->whereNumber('invoice')->middleware('resource.owner:invoicemaster,invoice_id,invoice')->name('invoice.update');
+    Route::delete('/invoice/{invoice}', [invoiceController::class, 'delete'])
+        ->whereNumber('invoice')->middleware('resource.owner:invoicemaster,invoice_id,invoice')->name('invoice.delete');
     Route::post('/invoice/generate-pdf', [invoiceController::class, 'createInvoicePost'])->name('invoice.createInvoicePost');
-    Route::get('/invoices/pdf/{invoice}', [invoiceGeneratorController::class, 'generate'])->name('invoice.pdf');
+    Route::get('/invoices/pdf/{invoice}', [invoiceGeneratorController::class, 'generate'])
+        ->whereNumber('invoice')->middleware('resource.owner:invoicemaster,invoice_id,invoice')->name('invoice.pdf');
 });
 
 Route::get('/deploy-clear-cache', function (Request $request) {

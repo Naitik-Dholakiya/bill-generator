@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin.auth' => \App\Http\Middleware\EnsureAdministrator::class,
             'user.auth' => \App\Http\Middleware\EnsureRegularUser::class,
+            'resource.owner' => \App\Http\Middleware\EnsureResourceOwnership::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
