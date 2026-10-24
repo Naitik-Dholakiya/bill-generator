@@ -15,12 +15,12 @@
     class="fixed inset-y-0 left-0 z-50 flex h-dvh w-72 max-w-[calc(100vw-2rem)] -translate-x-full flex-col overflow-hidden border-r border-slate-200 bg-white shadow-2xl shadow-slate-950/10 transition-transform duration-300 ease-in-out dark:border-zinc-800 dark:bg-zinc-900 lg:static lg:z-auto lg:h-full lg:w-64 lg:max-w-none lg:translate-x-0 lg:shadow-none">
 
     <div class="flex h-14 shrink-0 items-center justify-between border-b border-slate-100 px-4 dark:border-zinc-800">
-        <a href="{{ $isAdminSidebar ? route('admin.dashboard') : route('dashboard') }}" class="flex min-w-0 items-center gap-3 rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-500/20" aria-label="{{ $isAdminSidebar ? 'Billora admin console' : 'Vyapar home' }}">
+        <a href="{{ $isAdminSidebar ? route('admin.dashboard') : route('dashboard') }}" class="flex min-w-0 items-center gap-3 rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-500/20" aria-label="{{ $isAdminSidebar ? 'Vyapar admin console' : 'Vyapar home' }}">
             <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-600 text-base font-bold text-white shadow-md shadow-cyan-900/20">
                 {{ $isAdminSidebar ? 'B' : 'V' }}
             </span>
             <span class="min-w-0">
-                <span class="block truncate text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">{{ $isAdminSidebar ? 'Billora' : 'Vyapar' }}</span>
+                <span class="block truncate text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">{{ $isAdminSidebar ? 'Vyapar' : 'Vyapar' }}</span>
                 <span class="block text-[10px] font-medium uppercase tracking-[0.16em] text-slate-400 dark:text-zinc-500">{{ $isAdminSidebar ? 'Admin console' : 'Billing workspace' }}</span>
             </span>
         </a>

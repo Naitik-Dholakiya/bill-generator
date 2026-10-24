@@ -1,10 +1,10 @@
-# Billora Technical Documentation
+# Vyapar Technical Documentation
 
 **Updated 18 October 2026**
 
 ## Overview
 
-Billora is a Laravel 12 application for multi-workspace customer, supplier, product, category, and invoice management. Server-rendered Blade views provide the authenticated user workspace and administrator console. The application uses PHP 8.2+, Laravel authentication middleware/custom auth controllers, a relational database, Tailwind CSS 4, and Vite. DomPDF generates invoice PDFs.
+Vyapar is a Laravel 12 application for multi-workspace customer, supplier, product, category, and invoice management. Server-rendered Blade views provide the authenticated user workspace and administrator console. The application uses PHP 8.2+, Laravel authentication middleware/custom auth controllers, a relational database, Tailwind CSS 4, and Vite. DomPDF generates invoice PDFs.
 
 ## Implemented areas
 

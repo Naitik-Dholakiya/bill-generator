@@ -10,8 +10,8 @@ class InformationPagesTest extends TestCase
     {
         $pages = [
             ['/privacy-policy', 'Privacy Policy', 'Effective date'],
-            ['/user-manual', 'Billora User Manual', 'getting-started'],
-            ['/documentation', 'Billora Technical Documentation', 'Implemented areas'],
+            ['/user-manual', 'Vyapar User Manual', 'getting-started'],
+            ['/documentation', 'Vyapar Technical Documentation', 'Implemented areas'],
         ];
 
         foreach ($pages as [$url, $heading, $content]) {

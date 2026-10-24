@@ -34,7 +34,7 @@ Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/privacy-policy', function () {
     return view('pages.document', [
         'title' => 'Privacy policy',
-        'description' => 'How Billora workspace information is handled.',
+        'description' => 'How Vyapar workspace information is handled.',
         'content' => Str::markdown(File::get(base_path('docs/PRIVACY-POLICY.md'))),
     ]);
 })->name('privacy-policy');

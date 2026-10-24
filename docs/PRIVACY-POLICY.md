@@ -2,7 +2,7 @@
 
 **Effective date: 18 October 2026**
 
-This document describes the information handled by the Billora billing application. It is an operational privacy notice, not legal advice. The business or organization that deploys and operates a Billora instance is responsible for reviewing this notice, identifying its legal obligations, and publishing an appropriate policy for its customers and users.
+This document describes the information handled by the Vyapar billing application. It is an operational privacy notice, not legal advice. The business or organization that deploys and operates a Vyapar instance is responsible for reviewing this notice, identifying its legal obligations, and publishing an appropriate policy for its customers and users.
 
 ## Information handled
 
@@ -22,7 +22,7 @@ The application uses stored information to authenticate accounts, provide accoun
 
 ## Hosting, access, and sharing
 
-Billora is self-hostable. The deploying organization controls the hosting environment, database, backups, mail delivery, logs, access policies, and retention. This codebase does not define one universal hosting provider, data-residency region, backup schedule, or retention period. The operator should document those choices and restrict access to authorized users.
+Vyapar is self-hostable. The deploying organization controls the hosting environment, database, backups, mail delivery, logs, access policies, and retention. This codebase does not define one universal hosting provider, data-residency region, backup schedule, or retention period. The operator should document those choices and restrict access to authorized users.
 
 The application may send account-related email through the mail transport configured by the operator. The operator should review the configured mail provider's privacy terms. The application does not need to sell business records; do not infer from this notice that a specific deployment has no third-party infrastructure or processors.
 
@@ -40,7 +40,7 @@ Operators should keep dependencies and hosting systems updated, use unique crede
 
 ## Choices and requests
 
-For questions about data in a Billora deployment, contact the organization that operates that deployment. The operator is responsible for verifying the requester and handling access, correction, export, or deletion requests under applicable law.
+For questions about data in a Vyapar deployment, contact the organization that operates that deployment. The operator is responsible for verifying the requester and handling access, correction, export, or deletion requests under applicable law.
 
 ## Changes and contact
 

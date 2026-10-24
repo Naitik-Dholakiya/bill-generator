@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f8fafc">
-    <title>@yield('title', 'Error | ' . config('app.name', 'Billora'))</title>
+    <title>@yield('title', 'Error | ' . config('app.name', 'Vyapar'))</title>
     <style>
         :root {
             color-scheme: light;
@@ -113,9 +113,9 @@
 <body>
     <main>
         <section class="error-card" role="main" aria-labelledby="error-heading">
-            <div class="brand" aria-label="{{ config('app.name', 'Billora') }}">
+            <div class="brand" aria-label="{{ config('app.name', 'Vyapar') }}">
                 <span class="brand-mark" aria-hidden="true">B</span>
-                {{ config('app.name', 'Billora') }}
+                {{ config('app.name', 'Vyapar') }}
             </div>
             <div class="error-code" aria-hidden="true">@yield('code')</div>
             <h1 id="error-heading">@yield('heading')</h1>

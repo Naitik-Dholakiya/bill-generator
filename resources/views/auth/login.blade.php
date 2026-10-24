@@ -2,7 +2,7 @@
 
 @php
     // Change the product name here (one place only)
-    $brand   = 'Billora';
+    $brand   = 'Vyapar';
     $tagline = 'CRM & Billing';
 @endphp
 

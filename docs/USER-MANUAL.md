@@ -1,6 +1,6 @@
-# Billora User Manual
+# Vyapar User Manual
 
-**For Billora billing workspaces · Updated 18 October 2026**
+**For Vyapar billing workspaces · Updated 18 October 2026**
 
 ## 1. Sign in
 
@@ -55,4 +55,4 @@ Stock management and supplier bills/vouchers are shown as planned navigation ite
 
 ## 11. Help and data questions
 
-Use Documentation for technical and feature information and Privacy Policy for data-handling responsibilities. For access, correction, or deletion requests, contact the organization operating your Billora workspace.
+Use Documentation for technical and feature information and Privacy Policy for data-handling responsibilities. For access, correction, or deletion requests, contact the organization operating your Vyapar workspace.

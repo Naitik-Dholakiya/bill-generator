@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Administration') · Billora</title>
+    <title>@yield('title', 'Administration') · Vyapar</title>
     <script>
         (() => {
             const savedTheme = localStorage.getItem('theme') || 'system';
