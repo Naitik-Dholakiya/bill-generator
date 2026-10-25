@@ -147,12 +147,9 @@ class productController extends Controller
                 ->with('success', 'Product created successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-
-            Log::error('Error creating product: '.$e->getMessage());
-
             return redirect()
                 ->back()
-                ->with('Warning', 'Something went wrong. Please try again.')
+                ->with('error', $e->getMessage())
                 ->withInput();
         }
     }

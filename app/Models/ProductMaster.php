@@ -48,6 +48,11 @@ class ProductMaster extends Model
         return $this->belongsTo(SupplierMaster::class, 'supplier_id', 'supplier_id');
     }
 
+    public function inventory()
+    {
+        return $this->hasOne(InventoryMaster::class, 'product_id', 'product_id');
+    }
+
     public function creator()
     {
         return $this->belongsTo(usermaster::class, 'created_by', 'user_id');

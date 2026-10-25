@@ -29,7 +29,7 @@ The Suppliers area stores supplier and contact information, including supplier c
 
 Products include a product code and name, category, supplier, purchase price, selling price, reorder level, and active status. Jewellery-enabled workspaces can also store a default Touch and wastage percentage for eligible products. Categories can be selected or created during product setup.
 
-The current reorder-level display is not a full stock ledger. A Stock module with stock movements and quantity reconciliation is planned separately.
+The Stock area shows the recorded quantity for each active product, highlights products at or below their reorder level, and lets you update the available quantity. Supplier bills add their purchased quantities to stock; editing a bill adjusts the difference, and deleting it reverses the bill quantities. Invoice sales do not automatically deduct stock, and a full stock-movement history is not kept.
 
 ## 6. Invoices
 
@@ -37,22 +37,28 @@ Create an invoice by selecting a customer and date, adding product rows, and rev
 
 Use the invoice detail/PDF actions to view or download the generated invoice. The invoice layout is determined by the account's configured template.
 
-## 7. Jewellery vouchers
+## 7. Supplier bills
+
+Create a supplier bill by selecting a supplier and date, adding purchased products, and entering quantities, unit costs, tax, and discounts. The bill total is calculated from the line items. Supplier bills can be searched, reviewed, edited, deleted, and downloaded as PDFs. Payment status can be marked pending, partial, or paid; the status is a record only and does not track individual payments.
+
+Saving a bill increases stock quantities. Editing a bill adjusts stock by the difference in item quantities. Deleting a bill reverses the quantities, but is blocked if that would make stock negative. Bills do not automatically change the purchase price on the product record.
+
+## 8. Jewellery vouchers
 
 Jewellery voucher entry is available only to workspaces whose administrator enabled jewellery mode. Select a party and date, add products, and enter the piece count and applicable weights, Touch, and wastage. Review the calculated fine weight and gold balance details before saving. Confirm the generated voucher carefully; weight calculations depend on the values entered.
 
-## 8. Dashboard
+## 9. Dashboard
 
 The dashboard summarizes available business and invoice records, including revenue, outstanding invoices, customer/product/supplier counts, invoice status, recent invoices, and sales summaries. A value of zero is different from missing data: some summaries depend on having invoices or invoice items.
 
-## 9. Settings and account security
+## 10. Settings and account security
 
 Open Settings to update personal details, business name, address, GSTIN, and password. Invoice template and jewellery access may be managed by an administrator. Keep business profile and invoice details accurate before generating customer-facing documents.
 
-## 10. Planned features
+## 11. Planned features
 
-Stock management and supplier bills/vouchers are shown as planned navigation items only. They are not currently operational modules. Do not use those labels as evidence that stock quantities or supplier bills are being recorded.
+Supplier payment allocation and a detailed stock-movement ledger are not currently available.
 
-## 11. Help and data questions
+## 12. Help and data questions
 
 Use Documentation for technical and feature information and Privacy Policy for data-handling responsibilities. For access, correction, or deletion requests, contact the organization operating your Vyapar workspace.

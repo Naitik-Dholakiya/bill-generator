@@ -19,6 +19,8 @@ use App\Http\Controllers\dashboardController;
 use App\Http\Controllers\invoiceGeneratorController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\stockController;
+use App\Http\Controllers\supplierBillController;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Http\Request;
@@ -103,6 +105,26 @@ Route::middleware('user.auth')->group(function () {
         ->whereNumber('id')->middleware('resource.owner:suppliermaster,supplier_id,id')->name('editSupplierPost');
     Route::delete('/supplier/delete/{id}', [supplierController::class, 'deleteSupplier'])
         ->whereNumber('id')->middleware('resource.owner:suppliermaster,supplier_id,id')->name('supplier.delete');
+
+    Route::get('/stock', [stockController::class, 'index'])->name('stock.index');
+    Route::put('/stock/{productId}', [stockController::class, 'updateStock'])
+        ->whereNumber('productId')
+        ->middleware('resource.owner:productmaster,product_id,productId')
+        ->name('stock.update');
+
+    Route::get('/supplier-bills', [supplierBillController::class, 'index'])->name('supplier-bills.index');
+    Route::get('/supplier-bills/create', [supplierBillController::class, 'create'])->name('supplier-bills.create');
+    Route::post('/supplier-bills', [supplierBillController::class, 'store'])->name('supplier-bills.store');
+    Route::get('/supplier-bills/{billId}', [supplierBillController::class, 'show'])
+        ->whereNumber('billId')->middleware('resource.owner:purchasemaster,purchase_id,billId')->name('supplier-bills.show');
+    Route::get('/supplier-bills/{billId}/pdf', [supplierBillController::class, 'pdf'])
+        ->whereNumber('billId')->middleware('resource.owner:purchasemaster,purchase_id,billId')->name('supplier-bills.pdf');
+    Route::get('/supplier-bills/{billId}/edit', [supplierBillController::class, 'edit'])
+        ->whereNumber('billId')->middleware('resource.owner:purchasemaster,purchase_id,billId')->name('supplier-bills.edit');
+    Route::put('/supplier-bills/{billId}', [supplierBillController::class, 'update'])
+        ->whereNumber('billId')->middleware('resource.owner:purchasemaster,purchase_id,billId')->name('supplier-bills.update');
+    Route::delete('/supplier-bills/{billId}', [supplierBillController::class, 'destroy'])
+        ->whereNumber('billId')->middleware('resource.owner:purchasemaster,purchase_id,billId')->name('supplier-bills.destroy');
 
     Route::get('/products/dashboard', [productController::class, 'index'])->name('products.index');
     Route::get('/products/create', [productController::class,'createProduct'])->name('products.create');

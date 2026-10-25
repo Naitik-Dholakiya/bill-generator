@@ -13,6 +13,17 @@
             @include('layout.navbar', ['title' => 'Suppliers'])
 
             <main class="flex-1 overflow-y-auto p-6">
+                @if (session('success'))
+                    <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+                        {{ session('success') }}
+                    </div>
+                @endif
+
+                @if (session('error'))
+                    <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+                        {{ session('error') }}
+                    </div>
+                @endif
 
                 <!-- Header -->
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -158,36 +169,22 @@
 
                                                 </a>
 
-                                                <!-- Edit -->
-                                                {{-- 
-                                            <a href="{{ route('editSupplier', $supplier->supplier_id) }}"
+                                                <a href="{{ route('supplier.edit', $supplier->supplier_id) }}"
                                                 class="w-9 h-9 rounded-lg bg-amber-100 text-amber-600
                                                 hover:bg-amber-200 flex items-center justify-center">
-
                                                 <i class="ti ti-edit"></i>
-
-                                            </a>
-                                            --}}
-
-                                                <!-- Delete -->
-                                                {{--
-                                            <form action="{{ route('deleteSupplier', $supplier->supplier_id) }}"
+                                                </a>
+                                                <form action="{{ route('supplier.delete', $supplier->supplier_id) }}"
                                                 method="POST"
                                                 onsubmit="return confirm('Delete this supplier?')">
-
                                                 @csrf
                                                 @method('DELETE')
-
-                                                <button
+                                                <button type="submit"
                                                     class="w-9 h-9 rounded-lg bg-red-100 text-red-600
                                                     hover:bg-red-200 flex items-center justify-center">
-
                                                     <i class="ti ti-trash"></i>
-
                                                 </button>
-
-                                            </form>
-                                            --}}
+                                                </form>
 
                                             </div>
 
@@ -235,7 +232,7 @@
 
                 <!-- Pagination -->
                 <div class="mt-6">
-                    {{-- {{ $suppliers->links() }} --}}
+                    {{ $suppliers->links() }}
                 </div>
 
             </main>

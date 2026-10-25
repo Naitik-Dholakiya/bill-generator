@@ -261,7 +261,7 @@
                     @endif
                 </div>
 
-                {{-- Reorder watch (proxy for low stock — see note at top) --}}
+                {{-- Reorder watch --}}
                 <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-5">
                     <div class="flex items-center justify-between mb-3">
                         <p class="text-xs text-gray-500 dark:text-gray-400">Reorder watch</p>
@@ -274,7 +274,7 @@
                         <p class="text-xs text-gray-400 mt-2">Set a reorder level on a product to track this</p>
                     @else
                         <p class="text-2xl font-medium">{{ $num($kpis['reorder_watch_count']) }}</p>
-                        <p class="text-xs text-gray-400 mt-2">products with a reorder level set</p>
+                        <p class="text-xs text-gray-400 mt-2">products at or below reorder level</p>
                     @endif
                 </div>
 
@@ -464,9 +464,7 @@
                 <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden">
                     <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-zinc-800">
                         <h3 class="font-medium text-sm">Reorder watch</h3>
-                        <span class="text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                            No stock_quantity column yet
-                        </span>
+                        <a href="{{ route('stock.index') }}" class="text-xs text-cyan-600 hover:underline dark:text-cyan-400">Manage stock</a>
                     </div>
                     <div class="divide-y divide-gray-50 dark:divide-zinc-800">
                         @forelse ($reorderWatch as $r)
@@ -478,7 +476,7 @@
                                     <p class="text-sm truncate">{{ $r->product_name }}</p>
                                     <p class="text-xs text-gray-400 mt-0.5">{{ $r->product_code }} · supplier: {{ $r->supplier_name }}</p>
                                 </div>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">reorder @ {{ number_format($r->reorder_level) }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ number_format($r->quantity_in_stock) }} / {{ number_format($r->reorder_level) }} in stock</p>
                             </div>
                         @empty
                             <div class="px-5 py-8 text-center">

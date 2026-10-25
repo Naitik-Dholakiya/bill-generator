@@ -1,11 +1,10 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\SupplierMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
 
 class supplierController extends Controller
@@ -15,8 +14,18 @@ class supplierController extends Controller
         $userId = request()->cookies->get('GTA');
         $suppliers = SupplierMaster::where('created_by', $userId)
             ->where('status', '1')
+            ->when(request('search'), function ($query, $search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('supplier_code', 'like', '%'.$search.'%')
+                        ->orWhere('supplier_name', 'like', '%'.$search.'%')
+                        ->orWhere('contact_person', 'like', '%'.$search.'%')
+                        ->orWhere('email', 'like', '%'.$search.'%')
+                        ->orWhere('phone', 'like', '%'.$search.'%');
+                });
+            })
             ->orderByDesc('supplier_id')
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString();
 
         return view('suppliers.index', compact('suppliers'));
     }
@@ -26,7 +35,8 @@ class supplierController extends Controller
         $userId = request()->cookies->get('GTA');
 
         // Find last supplier of this user
-        $lastSupplier = SupplierMaster::where('created_by', $userId)
+        $lastSupplier = SupplierMaster::withTrashed()
+            ->where('created_by', $userId)
             ->orderByDesc('supplier_id')
             ->first();
 
@@ -47,52 +57,47 @@ class supplierController extends Controller
 
     public function createSupplierPost(Request $request)
     {
+        $validatedData = $request->validate([
+            'lf_supplier_code' => 'required|unique:suppliermaster,supplier_code|max:20',
+            'tb_supplierName' => 'required|max:100',
+            'tb_email' => 'nullable|email|max:100|unique:suppliermaster,email',
+            'tb_phone' => 'required|max:20',
+            'tb_contactPerson' => 'nullable|max:100',
+            'tb_gstNumber' => 'nullable|max:15|unique:suppliermaster,gst_number',
+            'tb_supplierAddress' => 'nullable',
+        ], [
+            'tb_supplierName.required' => 'Supplier name is required.',
+            'tb_phone.required' => 'Phone number is required.',
+            'tb_gstNumber.unique' => 'GST number is already in use.',
+            'tb_email.unique' => 'Email is already in use.',
+            'tb_contactPerson.max' => 'Contact person name is too long.',
+        ], [
+            'lf_supplier_code' => 'Supplier Code',
+            'tb_supplierName' => 'Supplier Name',
+            'tb_email' => 'Email',
+            'tb_phone' => 'Phone',
+            'tb_gstNumber' => 'GST Number',
+            'tb_supplierAddress' => 'Supplier Address',
+            'tb_contactPerson' => 'Contact Person',
+        ]);
+
         try {
-            $validator = Validator::make($request->all(), [
-                'lf_supplier_code' => 'required|unique:suppliermaster,supplier_code|max:20',
-                'tb_supplierName' => 'required|max:100',
-                'tb_email' => 'nullable|email|max:100|unique:suppliermaster,email',
-                'tb_phone' => 'required|max:20',
-                'tb_contactPerson' => 'nullable|max:100',
-                'tb_gstNumber' => 'nullable|max:15|unique:suppliermaster,gst_number',
-                'tb_supplierAddress' => 'nullable',
-            ], [
-                'tb_supplierName.required' => 'Supplier name is required.',
-                'tb_phone.required' => 'Phone number is required.',
-                'tb_gstNumber.unique' => 'GST number is already in use.',
-                'tb_email.unique' => 'Email is already in use.',
-                'tb_phone.unique' => 'Phone number is already in use.',
-                'tb_contactPerson.max' => 'Contact person name is too long.',
-            ], [
-                'lf_supplier_code' => 'Supplier Code',
-                'tb_supplierName' => 'Supplier Name',
-                'tb_email' => 'Email',
-                'tb_phone' => 'Phone',
-                'tb_gstNumber' => 'GST Number',
-                'tb_supplierAddress' => 'Supplier Address',
-                'tb_contactPerson' => 'Contact Person',
-            ]);
-
             $userId = request()->cookies->get('GTA');
-            $validatedData = $validator->validate();
+            DB::transaction(function () use ($validatedData, $userId) {
+                SupplierMaster::create([
+                    'supplier_code' => $validatedData['lf_supplier_code'],
+                    'supplier_name' => $validatedData['tb_supplierName'],
+                    'email' => $validatedData['tb_email'] ?? null,
+                    'phone' => $validatedData['tb_phone'],
+                    'gst_number' => $validatedData['tb_gstNumber'] ?? null,
+                    'supplier_address' => $validatedData['tb_supplierAddress'] ?? null,
+                    'contact_person' => $validatedData['tb_contactPerson'] ?? null,
+                    'created_by' => $userId,
+                ]);
+            });
 
-            DB::beginTransaction();
-            SupplierMaster::create([
-                'supplier_code' => $validatedData['lf_supplier_code'],
-                'supplier_name' => $validatedData['tb_supplierName'],
-                'email' => $validatedData['tb_email'],
-                'phone' => $validatedData['tb_phone'],
-                'gst_number' => $validatedData['tb_gstNumber'],
-                'supplier_address' => $validatedData['tb_supplierAddress'],
-                'contact_person' => $validatedData['tb_contactPerson'],
-                'created_by' => $userId,
-            ]);
-
-            DB::commit();
             return redirect()->route('suppliers.index')->with('success', 'Supplier created successfully.');
         } catch (\Exception $e) {
-            DB::rollBack();
-
             Log::error('Error creating supplier: '.$e->getMessage());
 
             return redirect()
@@ -116,53 +121,47 @@ class supplierController extends Controller
 
     public function editSupplierPost(Request $request, $id)
     {
+        $supplier = SupplierMaster::findOrFail($id);
+        $validatedData = $request->validate([
+            'tb_supplierName' => 'required|max:100',
+            'tb_email' => 'nullable|email|max:100|unique:suppliermaster,email,'.$supplier->supplier_id.',supplier_id',
+            'tb_phone' => 'required|max:20',
+            'tb_contactPerson' => 'nullable|max:100',
+            'tb_gstNumber' => 'nullable|max:15|unique:suppliermaster,gst_number,'.$supplier->supplier_id.',supplier_id',
+            'tb_supplierAddress' => 'nullable',
+        ], [
+            'tb_supplierName.required' => 'Supplier name is required.',
+            'tb_phone.required' => 'Phone number is required.',
+            'tb_gstNumber.unique' => 'GST number is already in use.',
+            'tb_email.unique' => 'Email is already in use.',
+            'tb_contactPerson.max' => 'Contact person name is too long.',
+        ], [
+            'tb_supplierName' => 'Supplier Name',
+            'tb_email' => 'Email',
+            'tb_phone' => 'Phone',
+            'tb_gstNumber' => 'GST Number',
+            'tb_supplierAddress' => 'Supplier Address',
+            'tb_contactPerson' => 'Contact Person',
+        ]);
+
         try {
-            $supplier = SupplierMaster::findOrFail($id);
-
-            $validatedData = $request->validate([
-                'tb_supplierName' => 'required|max:100',
-                'tb_email' => 'nullable|email|max:100|unique:suppliermaster,email,' . $supplier->supplier_id . ',supplier_id',
-                'tb_phone' => 'required|max:20|unique:suppliermaster,phone,' . $supplier->supplier_id . ',supplier_id',
-                'tb_contactPerson' => 'nullable|max:100',
-                'tb_gstNumber' => 'nullable|max:15|unique:suppliermaster,gst_number,' . $supplier->supplier_id . ',supplier_id',
-                'tb_supplierAddress' => 'nullable',
-            ], [
-                'tb_supplierName.required' => 'Supplier name is required.',
-                'tb_phone.required' => 'Phone number is required.',
-                'tb_gstNumber.unique' => 'GST number is already in use.',
-                'tb_email.unique' => 'Email is already in use.',
-                'tb_phone.unique' => 'Phone number is already in use.',
-                'tb_contactPerson.max' => 'Contact person name is too long.',
-            ], [
-                'tb_supplierName' => 'Supplier Name',
-                'tb_email' => 'Email',
-                'tb_phone' => 'Phone',
-                'tb_gstNumber' => 'GST Number',
-                'tb_supplierAddress' => 'Supplier Address',
-                'tb_contactPerson' => 'Contact Person',
-            ]);
-
             $userId = request()->cookies->get('GTA');
-            $validatedData['updated_by'] = $userId;
+            DB::transaction(function () use ($supplier, $validatedData, $userId) {
+                $supplier->update([
+                    'supplier_name' => $validatedData['tb_supplierName'],
+                    'email' => $validatedData['tb_email'] ?? null,
+                    'phone' => $validatedData['tb_phone'],
+                    'gst_number' => $validatedData['tb_gstNumber'] ?? null,
+                    'supplier_address' => $validatedData['tb_supplierAddress'] ?? null,
+                    'contact_person' => $validatedData['tb_contactPerson'] ?? null,
+                    'updated_by' => $userId,
+                ]);
+            });
 
-            DB::beginTransaction();
-            $supplier->update([
-                'supplier_name' => $validatedData['tb_supplierName'],
-                'email' => $validatedData['tb_email'],
-                'phone' => $validatedData['tb_phone'],
-                'gst_number' => $validatedData['tb_gstNumber'],
-                'supplier_address' => $validatedData['tb_supplierAddress'],
-                'contact_person' => $validatedData['tb_contactPerson'],
-                'updated_by' => $userId,
-            ]);
-
-            DB::commit();
             return redirect()->route('suppliers.index')->with('success', 'Supplier updated successfully.');
-        } catch (ValidationException $e) {
-            DB::rollback();
-            return redirect()->back()->withErrors($e->validator)->withInput();
         } catch (\Exception $e) {
-            DB::rollback();
+            Log::error('Error updating supplier: '.$e->getMessage());
+
             return redirect()->back()->with('error', 'An error occurred while updating the supplier. Please try again.')->withInput();
         }
     }
@@ -170,27 +169,25 @@ class supplierController extends Controller
     public function deleteSupplier($id)
     {
         try {
-            DB::beginTransaction();
-
-            SupplierMaster::where('supplier_id', $id)
-                ->update([
+            DB::transaction(function () use ($id) {
+                SupplierMaster::where('supplier_id', $id)
+                    ->update([
                     'status' => '0',
                     'updated_by' => request()->cookie('GTA'),
                     'deleted_at' => now(),
                 ]);
-            DB::commit();
+            });
 
             return redirect()
                 ->route('suppliers.index')
                 ->with('success', 'Supplier deleted successfully.');
 
         } catch (\Exception $e) {
-
-            DB::rollBack();
+            Log::error('Error deleting supplier: '.$e->getMessage());
 
             return redirect()
                 ->back()
-                ->with('error', $e->getMessage());
+                ->with('error', 'An error occurred while deleting the supplier. Please try again.');
         }
     }
 }

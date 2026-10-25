@@ -1,10 +1,10 @@
 # Vyapar Technical Documentation
 
-**Updated 18 October 2026**
+**Updated 25 October 2026**
 
 ## Overview
 
-Vyapar is a Laravel 12 application for multi-workspace customer, supplier, product, category, and invoice management. Server-rendered Blade views provide the authenticated user workspace and administrator console. The application uses PHP 8.2+, Laravel authentication middleware/custom auth controllers, a relational database, Tailwind CSS 4, and Vite. DomPDF generates invoice PDFs.
+Vyapar is a Laravel 12 application for multi-workspace customer, supplier, product, category, invoice, and supplier-bill management. Server-rendered Blade views provide the authenticated user workspace and administrator console. The application uses PHP 8.2+, Laravel authentication middleware/custom auth controllers, a relational database, Tailwind CSS 4, and Vite. DomPDF generates invoice and supplier-bill PDFs.
 
 ## Implemented areas
 
@@ -13,13 +13,15 @@ Vyapar is a Laravel 12 application for multi-workspace customer, supplier, produ
 - **Customers and suppliers:** Create, list, detail, edit, and delete flows with workspace ownership.
 - **Products and categories:** Product maintenance, supplier/category associations, pricing, reorder-level display, and category creation from product entry.
 - **Invoices:** Invoice and item create/edit/detail/delete flows; quantity, taxes, discounts, totals, payment status, and PDF generation.
+- **Supplier bills:** Supplier purchase bills with itemized costs/tax/discount, payment status, CRUD, PDF output, and automatic stock increases/reversals when bills are created, edited, or deleted.
+- **Stock:** Current on-hand quantities, reorder warnings, and manual quantity updates. Invoice sales do not automatically deduct stock and a full movement ledger is not maintained.
 - **Jewellery:** Feature-gated voucher workflows with piece/weight/Touch/wastage and fine-weight calculations. Invoice template keys are configured in `config/invoice.php`.
 - **Settings:** User profile, business identity, and password updates.
 - **Administration:** Workspace metrics and user account management, including status, jewellery feature access, and invoice-template assignment.
 
 ## Planned, not implemented
 
-Stock movements/quantity ledger and supplier bills/vouchers are future modules. Current reorder levels do not constitute inventory-on-hand accounting. Sidebar labels are informational only; there are no routes or data models for these modules.
+Supplier payment allocation and a detailed stock-movement ledger are not implemented. Supplier-bill payment status is stored on the bill; individual payments are not recorded.
 
 ## Important routes
 
@@ -30,6 +32,8 @@ Stock movements/quantity ledger and supplier bills/vouchers are future modules. 
 | `suppliers.*`, `createSupplier*`, `supplier.*` | Supplier workflows |
 | `products.*`, `createProductPost`, `editProductPost` | Product workflows |
 | `invoice.*` | Invoice and jewellery voucher workflows |
+| `supplier-bills.*` | Supplier purchase bill list, CRUD, and PDF |
+| `stock.*` | Current stock listing and quantity updates |
 | `settings`, `settings.update`, `changePassword` | Workspace profile/security settings |
 | `admin.*` | Administrator workspace and account management |
 | `privacy-policy`, `user-manual`, `documentation` | Public information pages rendered from `docs/` Markdown |
@@ -38,7 +42,7 @@ Route definitions are in `routes/web.php`. User-facing operations are protected 
 
 ## Data model
 
-Core tables include `usermaster`, `customermaster`, `suppliermaster`, `categorymaster`, `productmaster`, `invoicemaster`, and `invoice_items`. Laravel cache and queue tables are also used by the framework. See `database/migrations/` for the authoritative schema and migration history.
+Core tables include `usermaster`, `customermaster`, `suppliermaster`, `categorymaster`, `productmaster`, `invoicemaster`, `invoice_items`, `inventorymaster`, `purchasemaster`, and `purchase_items`. Laravel cache and queue tables are also used by the framework. See `database/migrations/` for the authoritative schema and migration history.
 
 Business rows are associated with a workspace/user identifier. Preserve these ownership filters in new queries and apply `resource.owner` to new ID-based routes so changing a URL ID cannot expose or modify another workspace's records. Unauthorized or missing IDs return 404.
 

@@ -2,7 +2,7 @@
 
 A Laravel-based billing and inventory management system built for businesses that need to manage customers, suppliers, products, categories, and invoices from a single dashboard.
 
-This project includes custom authentication, admin controls, invoice generation, PDF export, stock monitoring, and sales insights for daily business operations.
+This project includes custom authentication, admin controls, customer invoices, supplier bills, PDF exports, stock monitoring, and sales insights for daily business operations.
 
 ---
 
@@ -14,6 +14,7 @@ The application is designed for small and medium businesses to:
 - manage supplier and product data
 - organize products under categories
 - generate professional GST-compliant invoices
+- record supplier bills and purchased items
 - view sales and revenue analytics
 - monitor low-stock and reorder items
 - export invoice PDFs

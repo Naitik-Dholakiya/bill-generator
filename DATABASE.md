@@ -523,12 +523,18 @@ CREATE TABLE `productmaster` (
 
 Stores the current stock available for each product.
 
+The application stores one current quantity per product in `inventorymaster`. A missing row is treated as zero until the quantity is first saved. Supplier bills increase stock, while invoice sales do not automatically deduct it. A detailed stock movement ledger is not maintained.
+
 | Column Name       | Data Type       | Nullable | Default        | Description                 |
 | :---------------- | :-------------- | :------: | :------------: | :-------------------------: |
 | inventory_id      | BIGINT UNSIGNED |    No    | Auto Increment | Primary Key                 |
 | product_id        | BIGINT UNSIGNED |    No    |       -        | Product Reference           |
 | quantity_in_stock | INT             |    No    |       0        | Available Quantity          |
-| last_updated      | TIMESTAMP       |   Yes    | CURRENT_TIMESTAMP | Last Stock Update       |
+| created_by        | BIGINT UNSIGNED |   Yes    | NULL              | Workspace User          |
+| updated_by        | BIGINT UNSIGNED |   Yes    | NULL              | Last Updating User      |
+| created_at        | TIMESTAMP       |   Yes    | NULL              | Record Creation Time    |
+| updated_at        | TIMESTAMP       |   Yes    | NULL              | Last Update Time        |
+| deleted_at        | TIMESTAMP       |   Yes    | NULL              | Soft Delete Time        |
 
 ## Notes
 
@@ -541,20 +547,13 @@ Stores the current stock available for each product.
 | Column | References |
 | ------- | ---------- |
 | product_id | productmaster.product_id |
+| created_by | usermaster.user_id |
+| updated_by | usermaster.user_id |
 
 ## SQL Definition
 
 ```sql
-CREATE TABLE `inventorymaster` (
-  `inventory_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-  `product_id` bigint(20) UNSIGNED NOT NULL,
-  `quantity_in_stock` int NOT NULL DEFAULT '0',
-  `last_updated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-  PRIMARY KEY (`inventory_id`),
-
-  UNIQUE KEY `inventorymaster_product_unique` (`product_id`)
-);
+The `inventorymaster` table is defined by migration `2026_10_25_000000_create_inventorymaster_table.php`.
 ```
 
 # DISCOUNT MANAGEMENT
@@ -766,18 +765,29 @@ Stores payment transactions.
 
 # PURCHASE MANAGEMENT
 
-## purchases
+## purchasemaster
 
 Stores supplier purchase records.
 
-| Column        | Type          | Constraints                 |
-| ------------- | ------------- | --------------------------- |
-| purchase_id   | INT           | PK, AUTO_INCREMENT          |
-| supplier_id   | INT           | FK -> suppliers.supplier_id |
-| user_id       | INT           | FK -> users.user_id         |
-| purchase_date | DATE          | NOT NULL                    |
-| total_amount  | DECIMAL(12,2) | NOT NULL                    |
-| created_at    | TIMESTAMP     | DEFAULT CURRENT_TIMESTAMP   |
+| Column          | Type          | Constraints                       |
+| --------------- | ------------- | --------------------------------- |
+| purchase_id     | BIGINT        | PK, AUTO_INCREMENT                |
+| purchase_number | VARCHAR(50)   | Unique generated bill number      |
+| supplier_id     | BIGINT        | FK -> suppliermaster.supplier_id  |
+| purchase_date   | DATE          | NOT NULL                          |
+| subtotal        | DECIMAL(12,2) | NOT NULL, default 0                |
+| total_tax       | DECIMAL(12,2) | NOT NULL, default 0                |
+| discount_amount | DECIMAL(12,2) | NOT NULL, default 0                |
+| grand_total     | DECIMAL(12,2) | NOT NULL, default 0                |
+| payment_status  | ENUM          | pending, partial, paid            |
+| notes           | TEXT          | NULL                              |
+| created_by      | BIGINT        | FK -> usermaster.user_id, nullable |
+| updated_by      | BIGINT        | FK -> usermaster.user_id, nullable |
+| created_at      | TIMESTAMP     | NULL                              |
+| updated_at      | TIMESTAMP     | NULL                              |
+| deleted_at      | TIMESTAMP     | NULL, soft delete                 |
+
+Run `php artisan migrate` to create the supplier-bill tables.
 
 ## Jewelry Touch Fields
 
@@ -807,14 +817,21 @@ The command asks for confirmation and does not set or reveal the account passwor
 
 Stores purchased products.
 
-| Column           | Type          | Constraints                 |
-| ---------------- | ------------- | --------------------------- |
-| purchase_item_id | INT           | PK, AUTO_INCREMENT          |
-| purchase_id      | INT           | FK -> purchases.purchase_id |
-| product_id       | INT           | FK -> products.product_id   |
-| quantity         | INT           | NOT NULL                    |
-| purchase_price   | DECIMAL(10,2) | NOT NULL                    |
-| total_price      | DECIMAL(12,2) | NOT NULL                    |
+| Column           | Type          | Constraints                       |
+| ---------------- | ------------- | --------------------------------- |
+| purchase_item_id | BIGINT        | PK, AUTO_INCREMENT                |
+| purchase_id      | BIGINT        | FK -> purchasemaster.purchase_id  |
+| product_id       | BIGINT        | FK -> productmaster.product_id    |
+| quantity         | INT UNSIGNED  | NOT NULL                          |
+| unit_price       | DECIMAL(10,2) | NOT NULL                          |
+| tax_percent      | DECIMAL(5,2)  | NOT NULL, default 0               |
+| tax_amount       | DECIMAL(12,2) | NOT NULL, default 0               |
+| discount_amount  | DECIMAL(12,2) | NOT NULL, default 0               |
+| line_total       | DECIMAL(12,2) | NOT NULL, default 0               |
+| created_by       | BIGINT        | FK -> usermaster.user_id, nullable |
+| created_at       | TIMESTAMP     | NULL                              |
+| updated_at       | TIMESTAMP     | NULL                              |
+| deleted_at       | TIMESTAMP     | NULL, soft delete                 |
 
 ---
 
@@ -831,8 +848,8 @@ Stores purchased products.
 | invoices     | invoice_items  | One Invoice -> Many Items         |
 | products     | invoice_items  | One Product -> Many Invoice Items |
 | invoices     | payments       | One Invoice -> Many Payments      |
-| suppliers    | purchases      | One Supplier -> Many Purchases    |
-| purchases    | purchase_items | One Purchase -> Many Items        |
+| suppliers    | purchasemaster  | One Supplier -> Many Bills       |
+| purchasemaster | purchase_items | One Bill -> Many Items           |
 
 ---
 
@@ -984,7 +1001,7 @@ customers ----< invoices ----< invoice_items >---- products >---- categories
                            |
                         payments
 
-suppliers ----< purchases ----< purchase_items >---- products
+suppliers ----< purchasemaster ----< purchase_items >---- products
 
 roles ----< users
 ```

@@ -97,18 +97,21 @@
         </a>
 
         <p class="px-3 pb-1 pt-3 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-zinc-500">
-            Coming soon
+            Inventory
         </p>
-        <div aria-disabled="true" class="mb-0.5 flex min-h-9 cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-400 dark:text-zinc-500">
+        <a href="{{ route('stock.index') }}" @if (request()->routeIs('stock.*')) aria-current="page" @endif
+            class="mb-0.5 flex min-h-9 items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors {{ request()->routeIs('stock.*') ? 'bg-cyan-50 font-semibold text-cyan-800 dark:bg-cyan-950/50 dark:text-cyan-300' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white' }}">
             <i class="ti ti-box-seam w-5 shrink-0 text-lg" aria-hidden="true"></i>
             <span class="flex-1">Stock</span>
-            <span class="rounded-full border border-slate-200 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-400 dark:border-zinc-700 dark:text-zinc-500">Planned</span>
-        </div>
-        <div aria-disabled="true" class="mb-0.5 flex min-h-9 cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-400 dark:text-zinc-500">
+        </a>
+        <p class="px-3 pb-1 pt-3 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-zinc-500">
+            Purchasing
+        </p>
+        <a href="{{ route('supplier-bills.index') }}" @if (request()->routeIs('supplier-bills.*')) aria-current="page" @endif
+            class="mb-0.5 flex min-h-9 items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors {{ request()->routeIs('supplier-bills.*') ? 'bg-cyan-50 font-semibold text-cyan-800 dark:bg-cyan-950/50 dark:text-cyan-300' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white' }}">
             <i class="ti ti-receipt-2 w-5 shrink-0 text-lg" aria-hidden="true"></i>
             <span class="flex-1">Supplier bills</span>
-            <span class="rounded-full border border-slate-200 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-400 dark:border-zinc-700 dark:text-zinc-500">Planned</span>
-        </div>
+        </a>
         @endif
     </nav>
 
