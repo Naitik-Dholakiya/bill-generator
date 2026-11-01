@@ -49,7 +49,7 @@
                                     <th class="px-5 py-4 text-left font-semibold">Bill Number</th>
                                     <th class="px-5 py-4 text-left font-semibold">Supplier</th>
                                     <th class="px-5 py-4 text-left font-semibold">Bill Date</th>
-                                    <th class="px-5 py-4 text-right font-semibold">Total</th>
+                                    <th class="px-5 py-4 text-right font-semibold">{{ $isJewelryUser ? 'Fine Weight' : 'Total' }}</th>
                                     <th class="px-5 py-4 text-center font-semibold">Payment</th>
                                     <th class="px-5 py-4 text-right font-semibold">Actions</th>
                                 </tr>
@@ -62,7 +62,13 @@
                                         </td>
                                         <td class="px-5 py-4 font-medium">{{ $bill->supplier_name }}</td>
                                         <td class="px-5 py-4">{{ \Carbon\Carbon::parse($bill->purchase_date)->format('d M Y') }}</td>
-                                        <td class="px-5 py-4 text-right font-semibold">₹{{ number_format($bill->grand_total, 2) }}</td>
+                                        <td class="px-5 py-4 text-right font-semibold">
+                                            @if ($isJewelryUser)
+                                                {{ number_format((float) $bill->total_fine, 3) }} g
+                                            @else
+                                                ₹{{ number_format($bill->grand_total, 2) }}
+                                            @endif
+                                        </td>
                                         <td class="px-5 py-4 text-center">
                                             <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $bill->payment_status === 'paid' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' : ($bill->payment_status === 'partial' ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300') }}">
                                                 {{ ucfirst($bill->payment_status) }}

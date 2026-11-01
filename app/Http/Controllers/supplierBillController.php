@@ -14,8 +14,19 @@ class supplierBillController extends Controller
     public function index(Request $request)
     {
         $userId = $request->attributes->get('authenticated_user_id');
+        $isJewelryUser = $this->isJewelryUser($userId);
         $bills = DB::table('purchasemaster as bills')
             ->join('suppliermaster as suppliers', 'suppliers.supplier_id', '=', 'bills.supplier_id')
+            ->leftJoinSub(
+                DB::table('purchase_items')
+                    ->select('purchase_id', DB::raw('SUM(fine_weight) as total_fine'))
+                    ->whereNull('deleted_at')
+                    ->groupBy('purchase_id'),
+                'jewellery_totals',
+                'jewellery_totals.purchase_id',
+                '=',
+                'bills.purchase_id'
+            )
             ->where('bills.created_by', $userId)
             ->whereNull('bills.deleted_at')
             ->when($request->filled('search'), function ($query) use ($request) {
@@ -27,36 +38,41 @@ class supplierBillController extends Controller
             })
             ->when($request->filled('payment_status'), fn ($query) => $query->where('bills.payment_status', $request->input('payment_status')))
             ->orderByDesc('bills.purchase_id')
-            ->select('bills.*', 'suppliers.supplier_name')
+            ->select('bills.*', 'suppliers.supplier_name', 'jewellery_totals.total_fine')
             ->paginate(15)
             ->withQueryString();
 
-        return view('supplier-bills.index', compact('bills'));
+        return view('supplier-bills.index', compact('bills', 'isJewelryUser'));
     }
 
     public function create(Request $request)
     {
         $userId = $request->attributes->get('authenticated_user_id');
+        $isJewelryUser = $this->isJewelryUser($userId);
         $suppliers = $this->activeSuppliers($userId);
         $products = $this->activeProducts($userId);
         $billNumber = $this->generateBillNumber($userId);
-        $rows = collect(old('items', [['product_id' => '', 'quantity' => 1, 'unit_price' => '', 'tax_percent' => 0, 'discount_amount' => 0]]))
+        $defaultItem = $isJewelryUser
+            ? ['product_id' => '', 'pcs' => 1]
+            : ['product_id' => '', 'quantity' => 1, 'unit_price' => '', 'tax_percent' => 0, 'discount_amount' => 0];
+        $rows = collect(old('items', [$defaultItem]))
             ->map(fn ($item) => (object) (is_array($item) ? $item : []))
             ->values();
         if ($rows->isEmpty()) {
             $rows = collect([(object) []]);
         }
 
-        return view('supplier-bills.create', compact('suppliers', 'products', 'billNumber', 'rows'));
+        return view('supplier-bills.create', compact('suppliers', 'products', 'billNumber', 'rows', 'isJewelryUser'));
     }
 
     public function store(Request $request)
     {
         $userId = $request->attributes->get('authenticated_user_id');
-        $validated = $this->validateBill($request, $userId);
+        $isJewelryUser = $this->isJewelryUser($userId);
+        $validated = $this->validateBill($request, $userId, isJewelryUser: $isJewelryUser);
 
-        DB::transaction(function () use ($validated, $userId) {
-            $totals = $this->calculateTotals($validated['items']);
+        DB::transaction(function () use ($validated, $userId, $isJewelryUser) {
+            $totals = $this->calculateTotals($validated['items'], $isJewelryUser);
             $now = now();
             $billId = DB::table('purchasemaster')->insertGetId([
                 'purchase_number' => $this->generateBillNumber($userId),
@@ -65,13 +81,14 @@ class supplierBillController extends Controller
                 ...$totals,
                 'payment_status' => $validated['payment_status'],
                 'notes' => $validated['notes'] ?? null,
+                ...$this->jewelryBillAttributes($validated, $isJewelryUser),
                 'created_by' => $userId,
                 'created_at' => $now,
                 'updated_by' => $userId,
                 'updated_at' => $now,
             ]);
 
-            $this->replaceItems($billId, $validated['items'], $userId, $now);
+            $this->replaceItems($billId, $validated['items'], $userId, $now, $isJewelryUser);
             $this->adjustStock($this->quantitiesByProduct($validated['items']), $userId);
         });
 
@@ -83,15 +100,17 @@ class supplierBillController extends Controller
     public function show(Request $request, int $billId)
     {
         $userId = $request->attributes->get('authenticated_user_id');
+        $isJewelryUser = $this->isJewelryUser($userId);
         $bill = $this->findBill($billId, $userId);
         $items = $this->billItems($billId);
 
-        return view('supplier-bills.view', compact('bill', 'items'));
+        return view('supplier-bills.view', compact('bill', 'items', 'isJewelryUser'));
     }
 
     public function pdf(Request $request, int $billId)
     {
         $userId = $request->attributes->get('authenticated_user_id');
+        $isJewelryUser = $this->isJewelryUser($userId);
         $bill = $this->findBill($billId, $userId);
         $items = $this->billItems($billId);
         $supplier = DB::table('suppliermaster')
@@ -100,7 +119,7 @@ class supplierBillController extends Controller
         $workspace = DB::table('usermaster')
             ->where('user_id', $userId)
             ->first(['full_name', 'company_name', 'company_address', 'company_gstin', 'phone']);
-        $pdf = Pdf::loadView('supplier-bills.pdf', compact('bill', 'items', 'supplier', 'workspace'))
+        $pdf = Pdf::loadView('supplier-bills.pdf', compact('bill', 'items', 'supplier', 'workspace', 'isJewelryUser'))
             ->setPaper('a4', 'portrait');
         $filename = 'Supplier-Bill-'.preg_replace('/[^A-Za-z0-9_-]/', '-', $bill->purchase_number).'.pdf';
 
@@ -112,6 +131,7 @@ class supplierBillController extends Controller
     public function edit(Request $request, int $billId)
     {
         $userId = $request->attributes->get('authenticated_user_id');
+        $isJewelryUser = $this->isJewelryUser($userId);
         $bill = $this->findBill($billId, $userId);
         $suppliers = $this->activeSuppliers($userId, $bill->supplier_id);
         $items = $this->billItems($billId);
@@ -120,6 +140,11 @@ class supplierBillController extends Controller
         $rows = collect(old('items', $items->map(fn ($item) => [
             'product_id' => $item->product_id,
             'quantity' => $item->quantity,
+            'pcs' => $item->pcs,
+            'gross_weight' => $item->gross_weight,
+            'net_weight' => $item->net_weight,
+            'touch' => $item->touch,
+            'wastage' => $item->wastage,
             'unit_price' => $item->unit_price,
             'tax_percent' => $item->tax_percent,
             'discount_amount' => $item->discount_amount,
@@ -128,22 +153,24 @@ class supplierBillController extends Controller
             $rows = collect([(object) []]);
         }
 
-        return view('supplier-bills.edit', compact('bill', 'suppliers', 'products', 'rows'));
+        return view('supplier-bills.edit', compact('bill', 'suppliers', 'products', 'rows', 'isJewelryUser'));
     }
 
     public function update(Request $request, int $billId)
     {
         $userId = $request->attributes->get('authenticated_user_id');
+        $isJewelryUser = $this->isJewelryUser($userId);
         $bill = $this->findBill($billId, $userId);
         $oldItems = $this->billItems($billId);
         $validated = $this->validateBill(
             $request,
             $userId,
             (int) $bill->supplier_id,
-            $oldItems->pluck('product_id')->map(fn ($productId) => (int) $productId)->all()
+            $oldItems->pluck('product_id')->map(fn ($productId) => (int) $productId)->all(),
+            $isJewelryUser
         );
 
-        DB::transaction(function () use ($validated, $billId, $userId, $oldItems) {
+        DB::transaction(function () use ($validated, $billId, $userId, $oldItems, $isJewelryUser) {
             $oldQuantities = $this->quantitiesByProduct($oldItems->all());
             $newQuantities = $this->quantitiesByProduct($validated['items']);
             $stockDeltas = [];
@@ -152,7 +179,7 @@ class supplierBillController extends Controller
                 $stockDeltas[$productId] = ($newQuantities[$productId] ?? 0) - ($oldQuantities[$productId] ?? 0);
             }
 
-            $totals = $this->calculateTotals($validated['items']);
+            $totals = $this->calculateTotals($validated['items'], $isJewelryUser);
             $now = now();
             DB::table('purchasemaster')
                 ->where('purchase_id', $billId)
@@ -164,6 +191,7 @@ class supplierBillController extends Controller
                     ...$totals,
                     'payment_status' => $validated['payment_status'],
                     'notes' => $validated['notes'] ?? null,
+                    ...$this->jewelryBillAttributes($validated, $isJewelryUser),
                     'updated_by' => $userId,
                     'updated_at' => $now,
                 ]);
@@ -173,7 +201,7 @@ class supplierBillController extends Controller
                 ->whereNull('deleted_at')
                 ->update(['deleted_at' => $now, 'updated_at' => $now]);
 
-            $this->replaceItems($billId, $validated['items'], $userId, $now);
+            $this->replaceItems($billId, $validated['items'], $userId, $now, $isJewelryUser);
             $this->adjustStock($stockDeltas, $userId);
         });
 
@@ -214,10 +242,10 @@ class supplierBillController extends Controller
         Request $request,
         int $userId,
         ?int $currentSupplierId = null,
-        array $currentProductIds = []
-    ): array
-    {
-        return $request->validate([
+        array $currentProductIds = [],
+        bool $isJewelryUser = false
+    ): array {
+        $rules = [
             'supplier_id' => [
                 'required',
                 'integer',
@@ -252,15 +280,46 @@ class supplierBillController extends Controller
                         });
                 }),
             ],
-            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:2147483647'],
-            'items.*.unit_price' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
-            'items.*.tax_percent' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:100'],
-            'items.*.discount_amount' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
-        ]);
+        ];
+
+        if ($isJewelryUser) {
+            $rules += [
+                'voucher_section' => ['required', 'string', 'max:50'],
+                'less_kasar' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
+                'rate_cut_weight' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
+                'other_convert_fine' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
+                'opening_gold' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
+                'closing_gold' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
+                'footer_note' => ['nullable', 'string', 'max:500'],
+                'items.*.pcs' => ['required', 'integer', 'min:1', 'max:2147483647'],
+                'items.*.gross_weight' => ['nullable', 'numeric', 'decimal:0,3', 'min:0', 'max:9999999.999'],
+                'items.*.net_weight' => ['nullable', 'numeric', 'decimal:0,3', 'min:0', 'max:9999999.999'],
+                'items.*.touch' => ['nullable', 'numeric', 'between:0,100', 'decimal:0,3'],
+                'items.*.wastage' => ['nullable', 'numeric', 'between:0,100', 'decimal:0,3'],
+            ];
+        } else {
+            $rules += [
+                'items.*.quantity' => ['required', 'integer', 'min:1', 'max:2147483647'],
+                'items.*.unit_price' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
+                'items.*.tax_percent' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:100'],
+                'items.*.discount_amount' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
+            ];
+        }
+
+        return $request->validate($rules);
     }
 
-    private function calculateTotals(array $items): array
+    private function calculateTotals(array $items, bool $isJewelryUser = false): array
     {
+        if ($isJewelryUser) {
+            return [
+                'subtotal' => 0,
+                'total_tax' => 0,
+                'discount_amount' => 0,
+                'grand_total' => 0,
+            ];
+        }
+
         $subtotal = 0;
         $totalTax = 0;
         $totalDiscount = 0;
@@ -291,10 +350,39 @@ class supplierBillController extends Controller
         ];
     }
 
-    private function replaceItems(int $billId, array $items, int $userId, $now): void
+    private function replaceItems(int $billId, array $items, int $userId, $now, bool $isJewelryUser = false): void
     {
         foreach ($items as $item) {
-            $quantity = (int) $item['quantity'];
+            $quantity = (int) ($isJewelryUser ? $item['pcs'] : $item['quantity']);
+            if ($isJewelryUser) {
+                $touch = (float) ($item['touch'] ?? 0);
+                $wastage = (float) ($item['wastage'] ?? 0);
+                $netWeight = (float) ($item['net_weight'] ?? 0);
+                $fineWeight = round($netWeight * ($touch + $wastage) / 100, 3);
+
+                DB::table('purchase_items')->insert([
+                    'purchase_id' => $billId,
+                    'product_id' => $item['product_id'],
+                    'quantity' => $quantity,
+                    'pcs' => $quantity,
+                    'gross_weight' => $item['gross_weight'] ?? null,
+                    'net_weight' => $item['net_weight'] ?? null,
+                    'touch' => $item['touch'] ?? null,
+                    'wastage' => $item['wastage'] ?? null,
+                    'fine_weight' => $fineWeight,
+                    'unit_price' => 0,
+                    'tax_percent' => 0,
+                    'tax_amount' => 0,
+                    'discount_amount' => 0,
+                    'line_total' => 0,
+                    'created_by' => $userId,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+
+                continue;
+            }
+
             $unitPrice = (float) $item['unit_price'];
             $taxPercent = (float) ($item['tax_percent'] ?? 0);
             $discountAmount = (float) ($item['discount_amount'] ?? 0);
@@ -322,7 +410,7 @@ class supplierBillController extends Controller
         $quantities = [];
         foreach ($items as $item) {
             $productId = (int) (is_array($item) ? $item['product_id'] : $item->product_id);
-            $quantity = (int) (is_array($item) ? $item['quantity'] : $item->quantity);
+            $quantity = (int) (is_array($item) ? ($item['quantity'] ?? $item['pcs']) : ($item->quantity ?? $item->pcs));
             $quantities[$productId] = ($quantities[$productId] ?? 0) + $quantity;
         }
 
@@ -340,7 +428,7 @@ class supplierBillController extends Controller
                 ->where('product_id', $productId)
                 ->lockForUpdate()
                 ->first();
-            $currentQuantity = $inventory && !$inventory->trashed()
+            $currentQuantity = $inventory && ! $inventory->trashed()
                 ? (int) $inventory->quantity_in_stock
                 : 0;
             $newQuantity = $currentQuantity + $delta;
@@ -351,13 +439,14 @@ class supplierBillController extends Controller
                 ]);
             }
 
-            if (!$inventory) {
+            if (! $inventory) {
                 InventoryMaster::create([
                     'product_id' => $productId,
                     'quantity_in_stock' => $newQuantity,
                     'created_by' => $userId,
                     'updated_by' => $userId,
                 ]);
+
                 continue;
             }
 
@@ -381,7 +470,7 @@ class supplierBillController extends Controller
             ->select('bills.*', 'suppliers.supplier_name')
             ->first();
 
-        abort_if(!$bill, 404, 'Supplier bill not found.');
+        abort_if(! $bill, 404, 'Supplier bill not found.');
 
         return $bill;
     }
@@ -426,7 +515,36 @@ class supplierBillController extends Controller
                 }
             })
             ->orderBy('product_name')
-            ->get(['product_id', 'product_code', 'product_name', 'purchase_price']);
+            ->get(['product_id', 'product_code', 'product_name', 'purchase_price', 'touch', 'default_wastage']);
+    }
+
+    private function isJewelryUser(int $userId): bool
+    {
+        return (bool) DB::table('usermaster')
+            ->where('user_id', $userId)
+            ->value('is_jewelry');
+    }
+
+    private function jewelryBillAttributes(array $validated, bool $isJewelryUser): array
+    {
+        $fields = [
+            'voucher_section',
+            'less_kasar',
+            'rate_cut_weight',
+            'other_convert_fine',
+            'opening_gold',
+            'closing_gold',
+            'footer_note',
+        ];
+
+        $attributes = array_fill_keys($fields, null);
+        if ($isJewelryUser) {
+            foreach ($fields as $field) {
+                $attributes[$field] = $validated[$field] ?? null;
+            }
+        }
+
+        return $attributes;
     }
 
     private function generateBillNumber(int $userId): string

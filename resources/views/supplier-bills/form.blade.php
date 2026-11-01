@@ -4,6 +4,8 @@
         'id' => $product->product_id,
         'label' => $product->product_code.' - '.$product->product_name,
         'price' => $product->purchase_price,
+        'touch' => $product->touch,
+        'wastage' => $product->default_wastage,
     ])->values();
 @endphp
 
@@ -57,15 +59,96 @@
                 </select>
                 @error('payment_status')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
             </div>
+            @if ($isJewelryUser)
+                <div>
+                    <label for="voucher-section" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Voucher Section <span class="text-red-500">*</span></label>
+                    <input id="voucher-section" name="voucher_section" maxlength="50" required value="{{ old('voucher_section', $bill->voucher_section ?? 'PURCHASE') }}"
+                        class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 uppercase dark:border-zinc-700 dark:bg-zinc-800">
+                    @error('voucher_section')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+            @endif
             <div class="md:col-span-2 xl:col-span-4">
                 <label for="bill-notes" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
                 <textarea id="bill-notes" name="notes" rows="2" maxlength="2000"
                     class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">{{ old('notes', $bill->notes ?? '') }}</textarea>
                 @error('notes')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
             </div>
+            @if ($isJewelryUser)
+                <div class="md:col-span-2 xl:col-span-4">
+                    <label for="bill-footer-note" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Bill Footer Note</label>
+                    <input id="bill-footer-note" name="footer_note" maxlength="500" value="{{ old('footer_note', $bill->footer_note ?? '') }}"
+                        class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">
+                    @error('footer_note')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+            @endif
         </div>
     </section>
 
+    @if ($isJewelryUser)
+        <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div class="flex flex-col gap-3 border-b border-gray-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
+                <div>
+                    <h2 class="font-semibold text-gray-900 dark:text-white">Jewellery Items</h2>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Enter piece count and weights in grams. Fine weight is net weight × (touch + wastage) ÷ 100.</p>
+                </div>
+                <button type="button" id="addJewelleryItem" class="rounded-xl bg-amber-600 px-4 py-2.5 font-medium text-white hover:bg-amber-700">+ Add item</button>
+            </div>
+            <div class="overflow-x-auto p-4">
+                <table class="min-w-[1180px] w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500 dark:border-zinc-800 dark:text-gray-400">
+                            <th class="p-3">Product</th><th class="p-3">Pcs</th><th class="p-3">Gross wt (g)</th><th class="p-3">Net wt (g)</th>
+                            <th class="p-3">Touch %</th><th class="p-3">Wastage %</th><th class="p-3">Fine wt (g)</th><th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="jewelleryItems">
+                        @foreach ($rows as $index => $row)
+                            @include('invoice.jewellery.item-row', ['item' => $row, 'index' => $index])
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            <template id="jewelleryItemTemplate">
+                @include('invoice.jewellery.item-row', ['item' => (object) [], 'index' => '__INDEX__'])
+            </template>
+            @foreach ($errors->getMessages() as $key => $messages)
+                @if ($key === 'items' || str_starts_with($key, 'items.'))
+                    <p class="px-6 pb-2 text-sm text-red-600">{{ $messages[0] }}</p>
+                @endif
+            @endforeach
+        </section>
+
+        <section class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <h2 class="mb-5 font-semibold text-gray-900 dark:text-white">Gold Calculation</h2>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    @foreach (['less_kasar' => 'Less / kasar (g)', 'rate_cut_weight' => 'Rate cut weight (g)', 'other_convert_fine' => 'Other converted fine (g)'] as $name => $label)
+                        <label class="text-sm text-gray-600 dark:text-gray-300">{{ $label }}
+                            <input type="number" name="{{ $name }}" min="0" step="0.001" value="{{ old($name, $bill->$name ?? '') }}"
+                                class="gold-number mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-800">
+                            @error($name)<span class="mt-1 block text-red-600">{{ $message }}</span>@enderror
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+            <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <h2 class="mb-5 font-semibold text-gray-900 dark:text-white">Supplier Gold Balance</h2>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <label class="text-sm text-gray-600 dark:text-gray-300">Opening gold (g) · Credit
+                        <input type="number" name="opening_gold" min="0" step="0.001" value="{{ old('opening_gold', $bill->opening_gold ?? '') }}"
+                            class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-800">
+                        @error('opening_gold')<span class="mt-1 block text-red-600">{{ $message }}</span>@enderror
+                    </label>
+                    <label class="text-sm text-gray-600 dark:text-gray-300">Closing gold (g) · Debit
+                        <input type="number" name="closing_gold" min="0" step="0.001" value="{{ old('closing_gold', $bill->closing_gold ?? '') }}"
+                            class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-800">
+                        @error('closing_gold')<span class="mt-1 block text-red-600">{{ $message }}</span>@enderror
+                    </label>
+                </div>
+                <div class="mt-6 border-t border-gray-200 pt-5 text-lg font-bold text-gray-900 dark:border-zinc-800 dark:text-white">Total fine: <span id="jewelleryFineTotal">0.000 g</span></div>
+            </div>
+        </section>
+    @else
     <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div class="flex items-center justify-between border-b border-gray-200 px-6 py-5 dark:border-zinc-800">
             <div>
@@ -118,16 +201,65 @@
             </button>
         </div>
     </section>
+    @endif
 </form>
 
 @push('scripts')
 <script>
 (() => {
-    const tbody = document.getElementById('billItems');
-    const template = document.getElementById('billItemTemplate');
+    const tbody = document.getElementById(@json($isJewelryUser ? 'jewelleryItems' : 'billItems'));
+    const template = document.getElementById(@json($isJewelryUser ? 'jewelleryItemTemplate' : 'billItemTemplate'));
     const productOptions = @json($productOptions);
     let nextIndex = {{ count($rows) }};
 
+    @if ($isJewelryUser)
+    const numericValue = value => Number.parseFloat(value || '0') || 0;
+    const jewelleryFineTotal = document.getElementById('jewelleryFineTotal');
+
+    function calculateJewelleryTotals() {
+        let totalFine = 0;
+        tbody.querySelectorAll('.jewellery-item').forEach((row) => {
+            const netWeight = numericValue(row.querySelector('.net-weight').value);
+            const touch = numericValue(row.querySelector('.touch-value').value);
+            const wastage = numericValue(row.querySelector('.wastage-value').value);
+            const fineWeight = netWeight * (touch + wastage) / 100;
+            row.querySelector('.fine-weight').value = fineWeight.toFixed(3);
+            totalFine += fineWeight;
+        });
+        jewelleryFineTotal.textContent = totalFine.toFixed(3) + ' g';
+    }
+
+    function addJewelleryRow() {
+        const html = document.getElementById('jewelleryItemTemplate').innerHTML.replaceAll('__INDEX__', String(nextIndex++));
+        tbody.insertAdjacentHTML('beforeend', html);
+        calculateJewelleryTotals();
+    }
+
+    document.getElementById('addJewelleryItem').addEventListener('click', addJewelleryRow);
+    tbody.addEventListener('input', calculateJewelleryTotals);
+    tbody.addEventListener('change', (event) => {
+        if (event.target.matches('.product-select')) {
+            const product = productOptions.find((item) => String(item.id) === event.target.value);
+            const row = event.target.closest('.jewellery-item');
+            if (product && row) {
+                row.querySelector('.touch-value').value = product.touch || '';
+                row.querySelector('.wastage-value').value = product.wastage || '';
+            }
+        }
+        calculateJewelleryTotals();
+    });
+    tbody.addEventListener('click', (event) => {
+        const removeButton = event.target.closest('.remove-jewellery-item');
+        if (!removeButton) return;
+        if (tbody.querySelectorAll('.jewellery-item').length <= 1) {
+            alert('At least one jewellery item is required.');
+            return;
+        }
+        removeButton.closest('.jewellery-item').remove();
+        calculateJewelleryTotals();
+    });
+    calculateJewelleryTotals();
+    @else
     function addRow() {
         const html = template.innerHTML.replaceAll('__INDEX__', String(nextIndex++));
         tbody.insertAdjacentHTML('beforeend', html);
@@ -180,6 +312,7 @@
         }
     });
     updateTotals();
+    @endif
 })();
 </script>
 @endpush

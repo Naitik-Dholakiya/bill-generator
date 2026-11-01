@@ -1,16 +1,16 @@
 @extends('layouts.app')
 
-@section('title', 'Create Supplier Bill')
+@section('title', $isJewelryUser ? 'Create Jewellery Supplier Bill' : 'Create Supplier Bill')
 
 @section('content')
     <div class="flex h-screen overflow-hidden bg-gray-50 dark:bg-zinc-950">
         @include('layout.sidebar')
         <div class="flex flex-1 flex-col overflow-hidden">
-            @include('layout.navbar', ['title' => 'Create Supplier Bill'])
+            @include('layout.navbar', ['title' => $isJewelryUser ? 'Create Jewellery Supplier Bill' : 'Create Supplier Bill'])
             <main class="flex-1 overflow-y-auto p-6">
                 <div class="mb-6">
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Create Supplier Bill</h1>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Record products purchased from a supplier.</p>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ $isJewelryUser ? 'Create Jewellery Supplier Bill' : 'Create Supplier Bill' }}</h1>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ $isJewelryUser ? 'Record jewellery pieces, weights, touch, wastage and supplier gold balance.' : 'Record products purchased from a supplier.' }}</p>
                 </div>
 
                 @if ($suppliers->isEmpty() || $products->isEmpty())

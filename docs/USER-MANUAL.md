@@ -39,7 +39,7 @@ Use the invoice detail/PDF actions to view or download the generated invoice. Th
 
 ## 7. Supplier bills
 
-Create a supplier bill by selecting a supplier and date, adding purchased products, and entering quantities, unit costs, tax, and discounts. The bill total is calculated from the line items. Supplier bills can be searched, reviewed, edited, deleted, and downloaded as PDFs. Payment status can be marked pending, partial, or paid; the status is a record only and does not track individual payments.
+Create a supplier bill by selecting a supplier and date, adding purchased products, and entering quantities, unit costs, tax, and discounts. The bill total is calculated from the line items. Jewellery workspaces instead record pieces, gross/net weights, touch, wastage, fine weight, gold adjustments, and supplier gold balances, matching the jewellery invoice workflow; piece counts still update stock. Supplier bills can be searched, reviewed, edited, deleted, and downloaded as PDFs. Payment status can be marked pending, partial, or paid; the status is a record only and does not track individual payments.
 
 Saving a bill increases stock quantities. Editing a bill adjusts stock by the difference in item quantities. Deleting a bill reverses the quantities, but is blocked if that would make stock negative. Bills do not automatically change the purchase price on the product record.
 
