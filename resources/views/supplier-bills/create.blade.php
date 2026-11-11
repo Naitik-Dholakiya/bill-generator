@@ -5,31 +5,43 @@
 @section('content')
     <div class="flex h-screen overflow-hidden bg-gray-50 dark:bg-zinc-950">
         @include('layout.sidebar')
-        <div class="flex flex-1 flex-col overflow-hidden">
+        <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
             @include('layout.navbar', ['title' => $isJewelryUser ? 'Create Jewellery Supplier Bill' : 'Create Supplier Bill'])
-            <main class="flex-1 overflow-y-auto p-6">
-                <div class="mb-6">
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ $isJewelryUser ? 'Create Jewellery Supplier Bill' : 'Create Supplier Bill' }}</h1>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ $isJewelryUser ? 'Record jewellery pieces, weights, touch, wastage and supplier gold balance.' : 'Record products purchased from a supplier.' }}</p>
-                </div>
-
-                @if ($suppliers->isEmpty() || $products->isEmpty())
-                    <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
-                        Add an active supplier and at least one active product before creating a bill.
-                        @if ($suppliers->isEmpty())
-                            <a href="{{ route('createSupplier') }}" class="ml-1 font-semibold underline">Add supplier</a>
-                        @endif
-                        @if ($products->isEmpty())
-                            <a href="{{ route('products.create') }}" class="ml-1 font-semibold underline">Add product</a>
-                        @endif
+            <main class="flex-1 overflow-y-auto p-4 sm:p-6">
+                <div class="mx-auto w-full max-w-7xl">
+                    <div class="mb-6">
+                        <a href="{{ route('supplier-bills.index') }}" class="text-sm font-medium {{ $isJewelryUser ? 'text-amber-700 hover:text-amber-800 dark:text-amber-300' : 'text-cyan-700 hover:text-cyan-800 dark:text-cyan-300' }}">← Supplier bills</a>
+                        <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ $isJewelryUser ? 'Create Jewellery Supplier Bill' : 'Create Supplier Bill' }}</h1>
+                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ $isJewelryUser ? 'Record jewellery pieces, weights, touch, wastage and supplier gold balance.' : 'Record products purchased from a supplier.' }}</p>
+                            </div>
+                            @if ($isJewelryUser)
+                                <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+                                    Fine weight = net weight × (touch + wastage) ÷ 100
+                                </p>
+                            @endif
+                        </div>
                     </div>
-                @endif
 
-                @include('supplier-bills.form', [
-                    'action' => route('supplier-bills.store'),
-                    'isEdit' => false,
-                    'bill' => null,
-                ])
+                    @if ($suppliers->isEmpty() || $products->isEmpty())
+                        <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+                            Add an active supplier and at least one active product before creating a bill.
+                            @if ($suppliers->isEmpty())
+                                <a href="{{ route('createSupplier') }}" class="ml-1 font-semibold underline">Add supplier</a>
+                            @endif
+                            @if ($products->isEmpty())
+                                <a href="{{ route('products.create') }}" class="ml-1 font-semibold underline">Add product</a>
+                            @endif
+                        </div>
+                    @endif
+
+                    @include('supplier-bills.form', [
+                        'action' => route('supplier-bills.store'),
+                        'isEdit' => false,
+                        'bill' => null,
+                    ])
+                </div>
             </main>
             @include('layout.footer')
         </div>

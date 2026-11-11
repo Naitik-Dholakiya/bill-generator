@@ -137,7 +137,9 @@ class JewellerySupplierBillTest extends TestCase
             ->get(route('supplier-bills.create'))
             ->assertOk()
             ->assertSee('Fine wt (g)')
-            ->assertDontSee('Unit Cost');
+            ->assertDontSee('Unit Cost')
+            ->assertSee('Create Jewellery Supplier Bill')
+            ->assertSee('type="submit"', false);
 
         $this->withCookie('GTA', (string) $userId)
             ->post(route('supplier-bills.store'), [

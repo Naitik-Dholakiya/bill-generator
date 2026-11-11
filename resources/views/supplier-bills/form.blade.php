@@ -20,6 +20,11 @@
             {{ $errors->first('stock') }}
         </div>
     @endif
+    @if ($errors->any())
+        <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+            <p class="font-semibold">Please correct the highlighted fields before saving.</p>
+        </div>
+    @endif
 
     <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div class="border-b border-gray-200 px-6 py-5 dark:border-zinc-800">
@@ -67,17 +72,19 @@
                     @error('voucher_section')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
             @endif
-            <div class="md:col-span-2 xl:col-span-4">
+        </div>
+        <div class="grid grid-cols-1 gap-6 border-t border-gray-200 p-6 dark:border-zinc-800 md:grid-cols-2">
+            <div>
                 <label for="bill-notes" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
                 <textarea id="bill-notes" name="notes" rows="2" maxlength="2000"
-                    class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">{{ old('notes', $bill->notes ?? '') }}</textarea>
+                    class="min-h-24 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">{{ old('notes', $bill->notes ?? '') }}</textarea>
                 @error('notes')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
             </div>
             @if ($isJewelryUser)
-                <div class="md:col-span-2 xl:col-span-4">
+                <div>
                     <label for="bill-footer-note" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Bill Footer Note</label>
-                    <input id="bill-footer-note" name="footer_note" maxlength="500" value="{{ old('footer_note', $bill->footer_note ?? '') }}"
-                        class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">
+                    <textarea id="bill-footer-note" name="footer_note" rows="2" maxlength="500"
+                        class="min-h-24 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">{{ old('footer_note', $bill->footer_note ?? '') }}</textarea>
                     @error('footer_note')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
             @endif
@@ -121,7 +128,7 @@
         <section class="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                 <h2 class="mb-5 font-semibold text-gray-900 dark:text-white">Gold Calculation</h2>
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach (['less_kasar' => 'Less / kasar (g)', 'rate_cut_weight' => 'Rate cut weight (g)', 'other_convert_fine' => 'Other converted fine (g)'] as $name => $label)
                         <label class="text-sm text-gray-600 dark:text-gray-300">{{ $label }}
                             <input type="number" name="{{ $name }}" min="0" step="0.001" value="{{ old($name, $bill->$name ?? '') }}"
@@ -193,15 +200,25 @@
                 <p class="px-6 pb-2 text-sm text-red-600">{{ $messages[0] }}</p>
             @endif
         @endforeach
-        <div class="flex justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900">
-            <a href="{{ route('supplier-bills.index') }}" class="rounded-xl border border-gray-300 px-5 py-2.5 text-gray-700 hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800">Cancel</a>
-            <button type="submit" @disabled($suppliers->isEmpty() || $products->isEmpty())
-                class="rounded-xl bg-cyan-600 px-5 py-2.5 font-medium text-white hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50">
-                {{ $isEdit ? 'Save Changes' : 'Save Supplier Bill' }}
-            </button>
-        </div>
     </section>
     @endif
+
+    <div class="flex flex-col-reverse gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+            @if ($isJewelryUser)
+                Piece count updates stock. Fine weight is saved with each jewellery item.
+            @else
+                Saving this bill adds the purchased quantities to stock.
+            @endif
+        </p>
+        <div class="flex justify-end gap-3">
+            <a href="{{ route('supplier-bills.index') }}" class="inline-flex items-center justify-center rounded-xl border border-gray-300 px-5 py-2.5 font-medium text-gray-700 transition hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800">Cancel</a>
+            <button type="submit" @disabled($suppliers->isEmpty() || $products->isEmpty())
+                class="inline-flex items-center justify-center rounded-xl px-5 py-2.5 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 {{ $isJewelryUser ? 'bg-amber-600 hover:bg-amber-700' : 'bg-cyan-600 hover:bg-cyan-700' }}">
+                {{ $isEdit ? 'Save Changes' : ($isJewelryUser ? 'Create Jewellery Supplier Bill' : 'Save Supplier Bill') }}
+            </button>
+        </div>
+    </div>
 </form>
 
 @push('scripts')
