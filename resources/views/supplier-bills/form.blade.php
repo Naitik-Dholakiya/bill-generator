@@ -64,6 +64,16 @@
                 </select>
                 @error('payment_status')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
             </div>
+            @unless ($isJewelryUser)
+                <div>
+                    <label for="opening-paid-amount" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Amount already paid</label>
+                    <input id="opening-paid-amount" type="number" name="opening_paid_amount" min="0" step="0.01"
+                        value="{{ old('opening_paid_amount', $bill->opening_paid_amount ?? '') }}"
+                        class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Required when status is partial. Leave blank for legacy partial bills whose previous amount is unknown.</p>
+                    @error('opening_paid_amount')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+            @endunless
             @if ($isJewelryUser)
                 <div>
                     <label for="voucher-section" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Voucher Section <span class="text-red-500">*</span></label>

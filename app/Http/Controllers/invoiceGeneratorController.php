@@ -19,15 +19,15 @@ class invoiceGeneratorController extends Controller
         $user = Cookie::get('GTA') ? $this->currentUser($request) : null;
 
         $invoice = DB::table('invoicemaster as i')
-            ->join('customermaster as c', 'c.customer_id', '=', 'i.customer_id')
+            ->leftJoin('customermaster as c', 'c.customer_id', '=', 'i.customer_id')
             ->where('i.invoice_id', $invoiceId)
             ->whereNull('i.deleted_at')
             ->select(
                 'i.*',
-                'c.customer_name',
-                'c.billing_address as customer_address',
-                'c.phone as customer_phone',
-                'c.gst_number as customer_gstin'
+                DB::raw('COALESCE(i.customer_name_snapshot, c.customer_name) as customer_name'),
+                DB::raw('COALESCE(i.customer_address_snapshot, c.billing_address) as customer_address'),
+                DB::raw('COALESCE(i.customer_phone_snapshot, c.phone) as customer_phone'),
+                DB::raw('COALESCE(i.customer_gstin_snapshot, c.gst_number) as customer_gstin')
             )
             ->first();
 
@@ -38,13 +38,23 @@ class invoiceGeneratorController extends Controller
         // The seller is the user who created the invoice; their template is used.
         $seller = DB::table('usermaster')->where('user_id', $invoice->created_by)->first();
         $isJewelryUser = (bool) ($seller->is_jewelry ?? false);
+        $seller = clone $seller;
+        $seller->company_name = $invoice->seller_name_snapshot ?? $seller->company_name ?? $seller->full_name;
+        $seller->company_gstin = $invoice->seller_gstin_snapshot ?? $seller->company_gstin;
+        $seller->company_address = $invoice->seller_address_snapshot ?? $seller->company_address;
+        $seller->phone = $invoice->seller_phone_snapshot ?? $seller->phone;
 
         $items = DB::table('invoice_items as it')
-            ->join('productmaster as p', 'p.product_id', '=', 'it.product_id')
+            ->leftJoin('productmaster as p', 'p.product_id', '=', 'it.product_id')
             ->where('it.invoice_id', $invoiceId)
             ->whereNull('it.deleted_at')
             ->orderBy('it.item_id')
-            ->select('it.*', 'p.product_name')
+            ->select(
+                'it.*',
+                DB::raw('COALESCE(it.product_name_snapshot, p.product_name) as product_name'),
+                DB::raw('COALESCE(it.product_code_snapshot, p.product_code) as product_code'),
+                DB::raw('COALESCE(it.unit_snapshot, it.unit) as unit')
+            )
             ->get();
 
         if (($seller->invoice_template ?? null) === 'jewellery') {

@@ -8,6 +8,9 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Cookie;
 use Carbon\Carbon;
 use Illuminate\Validation\Rule;
+use App\Services\DocumentNumberGenerator;
+use App\Services\InventoryLedger;
+use Illuminate\Validation\ValidationException;
 
 class invoiceController extends Controller
 {
@@ -37,7 +40,7 @@ class invoiceController extends Controller
             )
             ->select(
                 'invoicemaster.*',
-                'customermaster.customer_name',
+                DB::raw('COALESCE(invoicemaster.customer_name_snapshot, customermaster.customer_name) as customer_name'),
                 'jewellery_totals.total_fine'
             )
             ->whereNull('invoicemaster.deleted_at')
@@ -62,14 +65,15 @@ class invoiceController extends Controller
 
         // Get Active Products
         $products = DB::table('productmaster')
+            ->where('created_by', $userId)
             ->where('status', '1')
-            // ->whereNull('deleted_at')
+            ->whereNull('deleted_at')
             ->orderBy('product_name')
             ->get();
 
 
         // Generate Invoice Number
-        $invoiceNumber = $this->generateInvoiceNumber();
+        $invoiceNumber = app(DocumentNumberGenerator::class)->previewInvoiceNumber((int) $userId);
         $oldItems = old('items', []);
         $formItems = collect(is_array($oldItems)
             ? array_map(fn ($item) => (object) (is_array($item) ? $item : []), $oldItems)
@@ -116,9 +120,13 @@ class invoiceController extends Controller
         $productIds = $items->pluck('product_id')->all();
         $products = DB::table('productmaster')
             ->where(function ($query) use ($productIds) {
-                $query->where('status', '1')
+                $query->where(function ($active) {
+                    $active->where('status', '1')
+                        ->whereNull('deleted_at');
+                })
                     ->orWhereIn('product_id', $productIds);
             })
+            ->where('created_by', $userId)
             ->orderBy('product_name')
             ->get();
 
@@ -147,7 +155,14 @@ class invoiceController extends Controller
             ->where('i.invoice_id', $invoiceId)
             ->where('i.created_by', $userId)
             ->whereNull('i.deleted_at')
-            ->select('i.*', 'c.customer_name', 'c.phone', 'c.email', 'c.billing_address', 'c.gst_number')
+            ->select(
+                'i.*',
+                DB::raw('COALESCE(i.customer_name_snapshot, c.customer_name) as customer_name'),
+                DB::raw('COALESCE(i.customer_phone_snapshot, c.phone) as phone'),
+                DB::raw('COALESCE(i.customer_email_snapshot, c.email) as email'),
+                DB::raw('COALESCE(i.customer_address_snapshot, c.billing_address) as billing_address'),
+                DB::raw('COALESCE(i.customer_gstin_snapshot, c.gst_number) as gst_number')
+            )
             ->first();
 
         abort_if(!$invoice, 404, 'Invoice not found.');
@@ -158,13 +173,31 @@ class invoiceController extends Controller
             ->where('it.invoice_id', $invoiceId)
             ->whereNull('it.deleted_at')
             ->orderBy('it.item_id')
-            ->select('it.*', 'p.product_name')
+            ->select(
+                'it.*',
+                DB::raw('COALESCE(it.product_name_snapshot, p.product_name) as product_name'),
+                DB::raw('COALESCE(it.product_code_snapshot, p.product_code) as product_code')
+            )
             ->get();
+        $payments = $isJewelryUser ? collect() : DB::table('invoice_payments')
+            ->where('invoice_id', $invoiceId)
+            ->orderByDesc('paid_at')
+            ->orderByDesc('invoice_payment_id')
+            ->get();
+        $revisions = DB::table('invoice_revisions')
+            ->where('invoice_id', $invoiceId)
+            ->orderByDesc('revision_number')
+            ->get()
+            ->map(function ($revision) {
+                $revision->snapshot = json_decode($revision->snapshot, true, 512, JSON_THROW_ON_ERROR);
+
+                return $revision;
+            });
 
         $view = $isJewelryUser ? 'invoice.jewellery.view' : 'invoice.view';
         $rows = $items;
 
-        return view($view, compact('invoice', 'items', 'rows', 'isJewelryUser'));
+        return view($view, compact('invoice', 'items', 'rows', 'payments', 'revisions', 'isJewelryUser'));
     }
 
     public function delete(int $invoiceId)
@@ -179,6 +212,36 @@ class invoiceController extends Controller
         abort_if(!$invoice, 404, 'Invoice not found.');
 
         DB::transaction(function () use ($invoiceId, $userId) {
+            $invoice = DB::table('invoicemaster')
+                ->where('invoice_id', $invoiceId)
+                ->where('created_by', $userId)
+                ->whereNull('deleted_at')
+                ->lockForUpdate()
+                ->first();
+            abort_if(! $invoice, 404, 'Invoice not found.');
+
+            $items = DB::table('invoice_items')
+                ->where('invoice_id', $invoiceId)
+                ->whereNull('deleted_at')
+                ->get()
+                ->all();
+            $this->recordInvoiceRevision($invoice, $items, (int) $userId);
+
+            if ($invoice->stock_tracked) {
+                foreach ($this->quantitiesByItems($items) as $productId => $quantity) {
+                    app(InventoryLedger::class)->applyMovement(
+                        $productId,
+                        $quantity,
+                        (int) $userId,
+                        'sale_reversal',
+                        'invoice',
+                        $invoiceId,
+                        'Invoice deleted.',
+                        true
+                    );
+                }
+            }
+
             $now = now();
 
             DB::table('invoicemaster')
@@ -218,7 +281,13 @@ class invoiceController extends Controller
             'invoice_date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => ['required', 'integer', 'exists:productmaster,product_id'],
+            'items.*.product_id' => [
+                'required',
+                'integer',
+                Rule::exists('productmaster', 'product_id')->where(function ($query) use ($userId) {
+                    $query->where('created_by', $userId)->whereNull('deleted_at');
+                }),
+            ],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.tax_amount' => ['nullable', 'numeric', 'min:0'],
@@ -230,6 +299,21 @@ class invoiceController extends Controller
         $validated = $request->validate($rules);
 
         DB::transaction(function () use ($validated, $invoiceId, $userId, $isJewelryUser) {
+            $invoice = DB::table('invoicemaster')
+                ->where('invoice_id', $invoiceId)
+                ->where('created_by', $userId)
+                ->whereNull('deleted_at')
+                ->lockForUpdate()
+                ->first();
+            abort_if(! $invoice, 404, 'Invoice not found.');
+
+            $oldItems = DB::table('invoice_items')
+                ->where('invoice_id', $invoiceId)
+                ->whereNull('deleted_at')
+                ->get()
+                ->all();
+            $this->recordInvoiceRevision($invoice, $oldItems, (int) $userId);
+            $headerSnapshot = $this->invoiceSnapshot((int) $userId, (int) $validated['customer_id']);
             $subtotal = 0;
             $totalTax = 0;
             $totalDiscount = 0;
@@ -249,6 +333,42 @@ class invoiceController extends Controller
                 $grandTotal += max($itemSubtotal + $taxAmount - $discountAmount, 0);
             }
 
+            $grandTotal = round($grandTotal, 2);
+            $openingPaidAmount = $invoice->opening_paid_amount === null ? null : (float) $invoice->opening_paid_amount;
+            $recordedPayments = (float) DB::table('invoice_payments')
+                ->where('invoice_id', $invoiceId)
+                ->whereNull('voided_at')
+                ->sum('amount');
+            if ($openingPaidAmount !== null
+                && $this->moneyCents($openingPaidAmount) + $this->moneyCents($recordedPayments) > $this->moneyCents($grandTotal)) {
+                throw ValidationException::withMessages([
+                    'items' => 'The invoice total cannot be lower than the amount already paid.',
+                ]);
+            }
+
+            $newQuantities = $this->quantitiesByItems($validated['items']);
+            if ($invoice->stock_tracked) {
+                $oldQuantities = $this->quantitiesByItems($oldItems);
+                foreach (array_unique(array_merge(array_keys($oldQuantities), array_keys($newQuantities))) as $productId) {
+                    $delta = ($oldQuantities[$productId] ?? 0) - ($newQuantities[$productId] ?? 0);
+                    app(InventoryLedger::class)->applyMovement(
+                        (int) $productId,
+                        (int) $delta,
+                        (int) $userId,
+                        'sale_adjustment',
+                        'invoice',
+                        $invoiceId,
+                        'Invoice items updated.',
+                        true
+                    );
+                }
+            }
+
+            $paidAmount = ($openingPaidAmount ?? 0) + $recordedPayments;
+            $paymentStatus = $grandTotal > 0 && ($openingPaidAmount !== null || $recordedPayments > 0)
+                ? $this->paymentStatus($paidAmount, $grandTotal)
+                : $invoice->payment_status;
+
             DB::table('invoicemaster')
                 ->where('invoice_id', $invoiceId)
                 ->where('created_by', $userId)
@@ -259,8 +379,11 @@ class invoiceController extends Controller
                     'subtotal' => round($subtotal, 2),
                     'total_tax' => round($totalTax, 2),
                     'discount_amount' => round($totalDiscount, 2),
-                    'grand_total' => round($grandTotal, 2),
+                    'grand_total' => $grandTotal,
+                    'payment_status' => $paymentStatus,
+                    ...$headerSnapshot,
                     'notes' => $validated['notes'] ?? null,
+                    'updated_by' => $userId,
                     'updated_at' => $now,
                 ]);
 
@@ -276,9 +399,12 @@ class invoiceController extends Controller
                 $discountAmount = (float) ($item['discount_amount'] ?? 0);
                 $itemSubtotal = $quantity * $unitPrice;
 
+                $product = $this->productSnapshot((int) $userId, (int) $item['product_id']);
                 DB::table('invoice_items')->insert([
                     'invoice_id' => $invoiceId,
                     'product_id' => $item['product_id'],
+                    'product_name_snapshot' => $product->product_name,
+                    'product_code_snapshot' => $product->product_code,
                     'touch' => $isJewelryUser ? ($item['touch'] ?? null) : null,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
@@ -361,7 +487,11 @@ class invoiceController extends Controller
             'items.*.product_id' => [
                 'required',
                 'integer',
-                'exists:productmaster,product_id'
+                Rule::exists('productmaster', 'product_id')->where(function ($query) use ($userId) {
+                    $query->where('created_by', $userId)
+                        ->where('status', '1')
+                        ->whereNull('deleted_at');
+                }),
             ],
 
             'items.*.quantity' => [
@@ -397,7 +527,8 @@ class invoiceController extends Controller
         // Start Database Transaction
         DB::beginTransaction();
         try {
-            $invoiceNumber = $this->generateInvoiceNumber();
+            $invoiceNumber = app(DocumentNumberGenerator::class)->nextInvoiceNumber((int) $userId);
+            $headerSnapshot = $this->invoiceSnapshot((int) $userId, (int) $validated['customer_id']);
 
             $subtotal = 0;
             $totalTax = 0;
@@ -451,9 +582,14 @@ class invoiceController extends Controller
                 'discount_amount' => $totalDiscount,
                 'grand_total' => $grandTotal,
                 'payment_status' => 'pending',
+                'opening_paid_amount' => 0,
+                'stock_tracked' => true,
+                ...$headerSnapshot,
                 'notes' => $validated['notes'] ?? null,
                 'created_at' => now(),
                 'created_by' => $userId,
+                'updated_by' => $userId,
+                'updated_at' => now(),
             ]);
 
             foreach ($validated['items'] as $item) {
@@ -487,9 +623,12 @@ class invoiceController extends Controller
                     ? ($taxAmount / $itemSubtotal) * 100
                     : 0;
 
+                $product = $this->productSnapshot((int) $userId, (int) $item['product_id']);
                 DB::table('invoice_items')->insert([
                     'invoice_id' => $invoiceId,
                     'product_id' => $item['product_id'],
+                    'product_name_snapshot' => $product->product_name,
+                    'product_code_snapshot' => $product->product_code,
                     'touch' => $isJewelryUser ? ($item['touch'] ?? null) : null,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
@@ -503,6 +642,17 @@ class invoiceController extends Controller
                     'created_at' => now(),
                     'created_by' => $userId,
                 ]);
+
+                app(InventoryLedger::class)->applyMovement(
+                    (int) $item['product_id'],
+                    -$quantity,
+                    (int) $userId,
+                    'sale',
+                    'invoice',
+                    $invoiceId,
+                    'Invoice sale.',
+                    true
+                );
             }
 
             DB::commit();
@@ -527,32 +677,85 @@ class invoiceController extends Controller
         }
     }
 
-    private function generateInvoiceNumber()
+    private function invoiceSnapshot(int $userId, int $customerId): array
     {
-        $year = date('Y');
+        $customer = DB::table('customermaster')
+            ->where('customer_id', $customerId)
+            ->where('created_by', $userId)
+            ->first(['customer_name', 'gst_number', 'billing_address', 'phone', 'email']);
+        abort_if(! $customer, 404, 'Customer not found.');
 
-        $userId = Cookie::get('GTA');
-        $prefix = 'INV' . $year .$userId;
+        $seller = DB::table('usermaster')
+            ->where('user_id', $userId)
+            ->first(['full_name', 'company_name', 'company_gstin', 'company_address', 'phone']);
+        abort_if(! $seller, 404, 'Workspace not found.');
 
-        $lastInvoice = DB::table('invoicemaster')
-            ->where('invoice_number', 'LIKE', $prefix . '%')
-            ->orderByDesc('invoice_id')
-            ->value('invoice_number');
+        return [
+            'customer_name_snapshot' => $customer->customer_name,
+            'customer_gstin_snapshot' => $customer->gst_number,
+            'customer_address_snapshot' => $customer->billing_address,
+            'customer_phone_snapshot' => $customer->phone,
+            'customer_email_snapshot' => $customer->email,
+            'seller_name_snapshot' => $seller->company_name ?: $seller->full_name,
+            'seller_gstin_snapshot' => $seller->company_gstin,
+            'seller_address_snapshot' => $seller->company_address,
+            'seller_phone_snapshot' => $seller->phone,
+        ];
+    }
 
-        if ($lastInvoice) {
+    private function productSnapshot(int $userId, int $productId): object
+    {
+        $product = DB::table('productmaster')
+            ->where('product_id', $productId)
+            ->where('created_by', $userId)
+            ->first(['product_name', 'product_code']);
+        abort_if(! $product, 404, 'Product not found.');
 
-            $lastSequence = (int) substr(
-                $lastInvoice,
-                strlen($prefix)
-            );
+        return $product;
+    }
 
-            $sequence = $lastSequence + 1;
-
-        } else {
-            $sequence = 1;
+    private function quantitiesByItems(array $items): array
+    {
+        $quantities = [];
+        foreach ($items as $item) {
+            $productId = (int) (is_array($item) ? $item['product_id'] : $item->product_id);
+            $quantity = (int) (is_array($item) ? ($item['quantity'] ?? $item['pcs'] ?? 0) : ($item->quantity ?? $item->pcs ?? 0));
+            $quantities[$productId] = ($quantities[$productId] ?? 0) + $quantity;
         }
 
-        return $prefix . str_pad($sequence,5,'0',STR_PAD_LEFT);
+        return $quantities;
+    }
+
+    private function paymentStatus(float $paidAmount, float $grandTotal): string
+    {
+        if ($paidAmount >= $grandTotal) {
+            return 'paid';
+        }
+
+        return $paidAmount > 0 ? 'partial' : 'pending';
+    }
+
+    private function moneyCents(mixed $amount): int
+    {
+        return (int) round((float) $amount * 100);
+    }
+
+    private function recordInvoiceRevision(object $invoice, array $items, int $userId): void
+    {
+        $revisionNumber = (int) DB::table('invoice_revisions')
+            ->where('invoice_id', $invoice->invoice_id)
+            ->max('revision_number') + 1;
+
+        DB::table('invoice_revisions')->insert([
+            'invoice_id' => $invoice->invoice_id,
+            'revision_number' => $revisionNumber,
+            'snapshot' => json_encode([
+                'invoice' => (array) $invoice,
+                'items' => array_map(fn ($item) => (array) $item, $items),
+            ], JSON_THROW_ON_ERROR),
+            'created_by' => $userId,
+            'created_at' => now(),
+        ]);
     }
 
     private function saveJewelryInvoice(Request $request, $userId, ?int $invoiceId = null)
@@ -571,7 +774,25 @@ class invoiceController extends Controller
             'closing_gold' => ['nullable', 'numeric', 'min:0'],
             'footer_note' => ['nullable', 'string', 'max:500'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => ['required', 'integer', 'exists:productmaster,product_id'],
+            'items.*.product_id' => [
+                'required',
+                'integer',
+                Rule::exists('productmaster', 'product_id')->where(function ($query) use ($userId, $invoiceId) {
+                    $query->where('created_by', $userId)
+                        ->where(function ($query) use ($invoiceId) {
+                            $query->where(function ($active) {
+                                $active->where('status', '1')->whereNull('deleted_at');
+                            });
+                            if ($invoiceId !== null) {
+                                $existingProductIds = DB::table('invoice_items')
+                                    ->where('invoice_id', $invoiceId)
+                                    ->whereNull('deleted_at')
+                                    ->pluck('product_id');
+                                $query->orWhereIn('product_id', $existingProductIds);
+                            }
+                        });
+                }),
+            ],
             'items.*.pcs' => ['required', 'integer', 'min:1'],
             'items.*.gross_weight' => ['nullable', 'numeric', 'min:0'],
             'items.*.net_weight' => ['nullable', 'numeric', 'min:0'],
@@ -582,6 +803,25 @@ class invoiceController extends Controller
         $now = now();
 
         DB::transaction(function () use ($validated, $userId, $invoiceId, $now) {
+            $existingInvoice = null;
+            $oldItems = [];
+            if ($invoiceId !== null) {
+                $existingInvoice = DB::table('invoicemaster')
+                    ->where('invoice_id', $invoiceId)
+                    ->where('created_by', $userId)
+                    ->whereNull('deleted_at')
+                    ->lockForUpdate()
+                    ->first();
+                abort_if(! $existingInvoice, 404, 'Invoice not found.');
+                $oldItems = DB::table('invoice_items')
+                    ->where('invoice_id', $invoiceId)
+                    ->whereNull('deleted_at')
+                    ->get()
+                    ->all();
+                $this->recordInvoiceRevision($existingInvoice, $oldItems, (int) $userId);
+            }
+
+            $headerSnapshot = $this->invoiceSnapshot((int) $userId, (int) $validated['customer_id']);
             $invoiceData = [
                 'customer_id' => $validated['customer_id'],
                 'invoice_date' => $validated['invoice_date'],
@@ -604,15 +844,20 @@ class invoiceController extends Controller
                 'closing_gold' => $validated['closing_gold'] ?? null,
                 'closing_gold_type' => 'Dr',
                 'footer_note' => $validated['footer_note'] ?? null,
+                ...$headerSnapshot,
+                'updated_by' => $userId,
                 'updated_at' => $now,
             ];
 
             if ($invoiceId === null) {
-                $invoiceData['invoice_number'] = $this->generateInvoiceNumber();
+                $invoiceData['invoice_number'] = app(DocumentNumberGenerator::class)->nextInvoiceNumber((int) $userId);
                 $invoiceData['created_at'] = $now;
                 $invoiceData['created_by'] = $userId;
+                $invoiceData['opening_paid_amount'] = 0;
+                $invoiceData['stock_tracked'] = true;
                 $invoiceId = DB::table('invoicemaster')->insertGetId($invoiceData);
             } else {
+                $invoiceData['payment_status'] = $existingInvoice->payment_status;
                 DB::table('invoicemaster')
                     ->where('invoice_id', $invoiceId)
                     ->where('created_by', $userId)
@@ -625,16 +870,49 @@ class invoiceController extends Controller
                     ->update(['deleted_at' => $now, 'updated_at' => $now]);
             }
 
+            $newQuantities = $this->quantitiesByItems($validated['items']);
+            if ($existingInvoice?->stock_tracked) {
+                $oldQuantities = $this->quantitiesByItems($oldItems);
+                foreach (array_unique(array_merge(array_keys($oldQuantities), array_keys($newQuantities))) as $productId) {
+                    app(InventoryLedger::class)->applyMovement(
+                        (int) $productId,
+                        ($oldQuantities[$productId] ?? 0) - ($newQuantities[$productId] ?? 0),
+                        (int) $userId,
+                        'sale_adjustment',
+                        'invoice',
+                        $invoiceId,
+                        'Jewellery voucher items updated.',
+                        true
+                    );
+                }
+            } elseif ($existingInvoice === null) {
+                foreach ($newQuantities as $productId => $quantity) {
+                    app(InventoryLedger::class)->applyMovement(
+                        (int) $productId,
+                        -$quantity,
+                        (int) $userId,
+                        'sale',
+                        'invoice',
+                        $invoiceId,
+                        'Jewellery voucher sale.',
+                        true
+                    );
+                }
+            }
+
             foreach ($validated['items'] as $item) {
                 $pcs = (int) $item['pcs'];
                 $touch = (float) ($item['touch'] ?? 0);
                 $wastage = (float) ($item['wastage'] ?? 0);
                 $netWeight = (float) ($item['net_weight'] ?? 0);
                 $fineWeight = round($netWeight * ($touch + $wastage) / 100, 3);
+                $product = $this->productSnapshot((int) $userId, (int) $item['product_id']);
 
                 DB::table('invoice_items')->insert([
                     'invoice_id' => $invoiceId,
                     'product_id' => $item['product_id'],
+                    'product_name_snapshot' => $product->product_name,
+                    'product_code_snapshot' => $product->product_code,
                     'pcs' => $pcs,
                     'quantity' => $pcs,
                     'gross_weight' => $item['gross_weight'] ?? null,

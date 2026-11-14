@@ -186,6 +186,9 @@
                         <p class="text-xs text-gray-400 mt-2">
                             across {{ $num($kpis['outstanding_count'] ?? 0) }} unpaid invoice{{ ($kpis['outstanding_count'] ?? 0) == 1 ? '' : 's' }}
                         </p>
+                        @if (($kpis['unknown_outstanding_count'] ?? 0) > 0)
+                            <p class="mt-1 text-xs text-amber-700 dark:text-amber-300">{{ $num($kpis['unknown_outstanding_count']) }} legacy partial balance{{ ($kpis['unknown_outstanding_count'] ?? 0) == 1 ? '' : 's' }} need reconciliation</p>
+                        @endif
                     @endif
                 </div>
 
@@ -205,6 +208,9 @@
                         <p class="text-xs text-gray-400 mt-2">
                             {{ $num($kpis['aged_pending_count'] ?? 0) }} invoice{{ ($kpis['aged_pending_count'] ?? 0) == 1 ? '' : 's' }} aging past 30 days
                         </p>
+                        @if (($kpis['unknown_aged_pending_count'] ?? 0) > 0)
+                            <p class="mt-1 text-xs text-amber-700 dark:text-amber-300">{{ $num($kpis['unknown_aged_pending_count']) }} legacy balance{{ ($kpis['unknown_aged_pending_count'] ?? 0) == 1 ? '' : 's' }} need reconciliation</p>
+                        @endif
                     @endif
                 </div>
 

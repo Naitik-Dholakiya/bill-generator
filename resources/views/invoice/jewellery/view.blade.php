@@ -105,6 +105,8 @@
                     </div>
                 </section>
 
+                @include('invoice.revisions')
+
                 <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
                     <div class="border-b border-gray-200 px-6 py-5 dark:border-zinc-800">
                         <h2 class="font-semibold text-gray-900 dark:text-white">Invoice</h2>

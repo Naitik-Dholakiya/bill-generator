@@ -13,7 +13,7 @@ class JewellerySupplierBillTest extends TestCase
     {
         parent::setUp();
 
-        foreach (['purchase_items', 'purchasemaster', 'inventorymaster', 'productmaster', 'categorymaster', 'suppliermaster', 'usermaster'] as $table) {
+        foreach (['supplier_bill_payments', 'inventory_movements', 'document_sequences', 'purchase_items', 'purchasemaster', 'inventorymaster', 'productmaster', 'categorymaster', 'suppliermaster', 'usermaster'] as $table) {
             Schema::dropIfExists($table);
         }
 
@@ -75,6 +75,7 @@ class JewellerySupplierBillTest extends TestCase
             $table->decimal('total_tax', 12, 2)->default(0);
             $table->decimal('discount_amount', 12, 2)->default(0);
             $table->decimal('grand_total', 12, 2)->default(0);
+            $table->decimal('opening_paid_amount', 12, 2)->nullable();
             $table->string('payment_status');
             $table->text('notes')->nullable();
             $table->string('voucher_section')->nullable();
@@ -118,11 +119,46 @@ class JewellerySupplierBillTest extends TestCase
             $table->timestamps();
             $table->softDeletes();
         });
+        Schema::create('document_sequences', function (Blueprint $table): void {
+            $table->bigIncrements('document_sequence_id');
+            $table->string('document_type', 30);
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedSmallInteger('year');
+            $table->unsignedInteger('next_sequence')->default(1);
+            $table->timestamps();
+            $table->unique(['document_type', 'user_id', 'year']);
+        });
+        Schema::create('inventory_movements', function (Blueprint $table): void {
+            $table->bigIncrements('inventory_movement_id');
+            $table->unsignedBigInteger('product_id');
+            $table->string('movement_type', 30);
+            $table->string('reference_type', 30)->nullable();
+            $table->unsignedBigInteger('reference_id')->nullable();
+            $table->integer('quantity_delta');
+            $table->integer('quantity_after');
+            $table->text('notes')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->timestamps();
+        });
+        Schema::create('supplier_bill_payments', function (Blueprint $table): void {
+            $table->bigIncrements('supplier_bill_payment_id');
+            $table->unsignedBigInteger('purchase_id');
+            $table->decimal('amount', 12, 2);
+            $table->date('paid_at');
+            $table->string('method', 30);
+            $table->string('reference_number', 100)->nullable();
+            $table->text('notes')->nullable();
+            $table->unsignedBigInteger('created_by');
+            $table->timestamp('voided_at')->nullable();
+            $table->unsignedBigInteger('voided_by')->nullable();
+            $table->string('void_reason', 500)->nullable();
+            $table->timestamps();
+        });
     }
 
     protected function tearDown(): void
     {
-        foreach (['purchase_items', 'purchasemaster', 'inventorymaster', 'productmaster', 'categorymaster', 'suppliermaster', 'usermaster'] as $table) {
+        foreach (['supplier_bill_payments', 'inventory_movements', 'document_sequences', 'purchase_items', 'purchasemaster', 'inventorymaster', 'productmaster', 'categorymaster', 'suppliermaster', 'usermaster'] as $table) {
             Schema::dropIfExists($table);
         }
 
@@ -216,6 +252,22 @@ class JewellerySupplierBillTest extends TestCase
             'product_id' => $productId,
             'quantity_in_stock' => 3,
         ]);
+        $this->assertDatabaseHas('inventory_movements', [
+            'product_id' => $productId,
+            'reference_type' => 'supplier_bill',
+            'reference_id' => $billId,
+            'movement_type' => 'purchase_receipt',
+            'quantity_delta' => 2,
+            'quantity_after' => 2,
+        ]);
+        $this->assertDatabaseHas('inventory_movements', [
+            'product_id' => $productId,
+            'reference_type' => 'supplier_bill',
+            'reference_id' => $billId,
+            'movement_type' => 'purchase_adjustment',
+            'quantity_delta' => 1,
+            'quantity_after' => 3,
+        ]);
 
         $this->withCookie('GTA', (string) $userId)
             ->get(route('supplier-bills.pdf', $billId))
@@ -250,6 +302,59 @@ class JewellerySupplierBillTest extends TestCase
         $this->assertDatabaseHas('inventorymaster', [
             'product_id' => $productId,
             'quantity_in_stock' => 2,
+        ]);
+    }
+
+    public function test_supplier_bill_payment_history_updates_status_and_preserves_void_audit(): void
+    {
+        [$userId, $supplierId, $productId] = $this->createWorkspace(false);
+
+        $this->withCookie('GTA', (string) $userId)
+            ->post(route('supplier-bills.store'), [
+                'supplier_id' => $supplierId,
+                'purchase_date' => '2026-11-01',
+                'payment_status' => 'pending',
+                'items' => [[
+                    'product_id' => $productId,
+                    'quantity' => 2,
+                    'unit_price' => '10.00',
+                    'tax_percent' => '10',
+                    'discount_amount' => '0.00',
+                ]],
+            ])
+            ->assertRedirect(route('supplier-bills.index'));
+
+        $billId = (int) DB::table('purchasemaster')->value('purchase_id');
+        $this->withCookie('GTA', (string) $userId)
+            ->post(route('supplier-bills.payments.store', $billId), [
+                'amount' => '5.00',
+                'paid_at' => '2026-11-10',
+                'method' => 'bank_transfer',
+                'reference_number' => 'BANK-001',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('purchasemaster', [
+            'purchase_id' => $billId,
+            'payment_status' => 'partial',
+        ]);
+
+        $paymentId = (int) DB::table('supplier_bill_payments')
+            ->where('purchase_id', $billId)
+            ->value('supplier_bill_payment_id');
+        $this->withCookie('GTA', (string) $userId)
+            ->post(route('supplier-bills.payments.void', [$billId, $paymentId]), [
+                'void_reason' => 'Entered against the wrong bank account',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('supplier_bill_payments', [
+            'supplier_bill_payment_id' => $paymentId,
+            'void_reason' => 'Entered against the wrong bank account',
+        ]);
+        $this->assertDatabaseHas('purchasemaster', [
+            'purchase_id' => $billId,
+            'payment_status' => 'pending',
         ]);
     }
 

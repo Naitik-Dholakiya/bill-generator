@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\InventoryMaster;
 use App\Models\ProductMaster;
+use App\Services\InventoryLedger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -34,6 +34,21 @@ class stockController extends Controller
         return view('stocks.stockIndex', compact('products'));
     }
 
+    public function movements(Request $request, int $productId)
+    {
+        $userId = (int) $request->attributes->get('authenticated_user_id');
+        $product = ProductMaster::query()
+            ->where('created_by', $userId)
+            ->findOrFail($productId);
+        $movements = DB::table('inventory_movements')
+            ->where('product_id', $productId)
+            ->orderByDesc('inventory_movement_id')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('stocks.movements', compact('product', 'movements'));
+    }
+
     public function updateStock(Request $request, int $productId)
     {
         $validatedData = $request->validate([
@@ -46,20 +61,11 @@ class stockController extends Controller
 
         $userId = $request->attributes->get('authenticated_user_id');
 
-        DB::transaction(function () use ($product, $validatedData, $userId) {
-            $inventory = InventoryMaster::withTrashed()->updateOrCreate(
-                ['product_id' => $product->product_id],
-                [
-                    'quantity_in_stock' => $validatedData['quantity_in_stock'],
-                    'created_by' => $userId,
-                    'updated_by' => $userId,
-                ]
-            );
-
-            if ($inventory->trashed()) {
-                $inventory->restore();
-            }
-        });
+        app(InventoryLedger::class)->setOnHand(
+            (int) $product->product_id,
+            (int) $validatedData['quantity_in_stock'],
+            (int) $userId
+        );
 
         return redirect()
             ->route('stock.index', $request->only('search'))

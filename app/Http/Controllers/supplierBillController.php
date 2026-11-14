@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\InventoryMaster;
+use App\Services\DocumentNumberGenerator;
+use App\Services\InventoryLedger;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -51,7 +52,7 @@ class supplierBillController extends Controller
         $isJewelryUser = $this->isJewelryUser($userId);
         $suppliers = $this->activeSuppliers($userId);
         $products = $this->activeProducts($userId);
-        $billNumber = $this->generateBillNumber($userId);
+        $billNumber = app(DocumentNumberGenerator::class)->previewSupplierBillNumber($userId);
         $defaultItem = $isJewelryUser
             ? ['product_id' => '', 'pcs' => 1]
             : ['product_id' => '', 'quantity' => 1, 'unit_price' => '', 'tax_percent' => 0, 'discount_amount' => 0];
@@ -74,12 +75,17 @@ class supplierBillController extends Controller
         DB::transaction(function () use ($validated, $userId, $isJewelryUser) {
             $totals = $this->calculateTotals($validated['items'], $isJewelryUser);
             $now = now();
+            $openingPaidAmount = $this->openingPaidAmount($validated, $totals['grand_total']);
+            $paymentStatus = ! $isJewelryUser && $totals['grand_total'] > 0 && $openingPaidAmount !== null
+                ? $this->paymentStatus($openingPaidAmount, $totals['grand_total'])
+                : $validated['payment_status'];
             $billId = DB::table('purchasemaster')->insertGetId([
-                'purchase_number' => $this->generateBillNumber($userId),
+                'purchase_number' => app(DocumentNumberGenerator::class)->nextSupplierBillNumber($userId),
                 'supplier_id' => $validated['supplier_id'],
                 'purchase_date' => $validated['purchase_date'],
                 ...$totals,
-                'payment_status' => $validated['payment_status'],
+                'payment_status' => $paymentStatus,
+                'opening_paid_amount' => $openingPaidAmount,
                 'notes' => $validated['notes'] ?? null,
                 ...$this->jewelryBillAttributes($validated, $isJewelryUser),
                 'created_by' => $userId,
@@ -89,7 +95,7 @@ class supplierBillController extends Controller
             ]);
 
             $this->replaceItems($billId, $validated['items'], $userId, $now, $isJewelryUser);
-            $this->adjustStock($this->quantitiesByProduct($validated['items']), $userId);
+            $this->adjustStock($this->quantitiesByProduct($validated['items']), $userId, 'purchase_receipt', $billId);
         });
 
         return redirect()
@@ -103,8 +109,13 @@ class supplierBillController extends Controller
         $isJewelryUser = $this->isJewelryUser($userId);
         $bill = $this->findBill($billId, $userId);
         $items = $this->billItems($billId);
+        $payments = $isJewelryUser ? collect() : DB::table('supplier_bill_payments')
+            ->where('purchase_id', $billId)
+            ->orderByDesc('paid_at')
+            ->orderByDesc('supplier_bill_payment_id')
+            ->get();
 
-        return view('supplier-bills.view', compact('bill', 'items', 'isJewelryUser'));
+        return view('supplier-bills.view', compact('bill', 'items', 'payments', 'isJewelryUser'));
     }
 
     public function pdf(Request $request, int $billId)
@@ -167,10 +178,11 @@ class supplierBillController extends Controller
             $userId,
             (int) $bill->supplier_id,
             $oldItems->pluck('product_id')->map(fn ($productId) => (int) $productId)->all(),
-            $isJewelryUser
+            $isJewelryUser,
+            $bill->payment_status === 'partial' && $bill->opening_paid_amount === null
         );
 
-        DB::transaction(function () use ($validated, $billId, $userId, $oldItems, $isJewelryUser) {
+        DB::transaction(function () use ($validated, $billId, $userId, $oldItems, $isJewelryUser, $bill) {
             $oldQuantities = $this->quantitiesByProduct($oldItems->all());
             $newQuantities = $this->quantitiesByProduct($validated['items']);
             $stockDeltas = [];
@@ -180,6 +192,25 @@ class supplierBillController extends Controller
             }
 
             $totals = $this->calculateTotals($validated['items'], $isJewelryUser);
+            $openingPaidAmount = $this->openingPaidAmount(
+                $validated,
+                $totals['grand_total'],
+                $bill->opening_paid_amount,
+                preserveUnknown: true
+            );
+            $recordedPayments = (float) DB::table('supplier_bill_payments')
+                ->where('purchase_id', $billId)
+                ->whereNull('voided_at')
+                ->sum('amount');
+            if ($openingPaidAmount !== null
+                && $this->moneyCents($openingPaidAmount) + $this->moneyCents($recordedPayments) > $this->moneyCents($totals['grand_total'])) {
+                throw ValidationException::withMessages([
+                    'items' => 'The bill total cannot be lower than the amount already paid.',
+                ]);
+            }
+            $paymentStatus = ! $isJewelryUser && $totals['grand_total'] > 0 && ($openingPaidAmount !== null || $recordedPayments > 0)
+                ? $this->paymentStatus(($openingPaidAmount ?? 0) + $recordedPayments, $totals['grand_total'])
+                : $validated['payment_status'];
             $now = now();
             DB::table('purchasemaster')
                 ->where('purchase_id', $billId)
@@ -189,7 +220,8 @@ class supplierBillController extends Controller
                     'supplier_id' => $validated['supplier_id'],
                     'purchase_date' => $validated['purchase_date'],
                     ...$totals,
-                    'payment_status' => $validated['payment_status'],
+                    'payment_status' => $paymentStatus,
+                    'opening_paid_amount' => $openingPaidAmount,
                     'notes' => $validated['notes'] ?? null,
                     ...$this->jewelryBillAttributes($validated, $isJewelryUser),
                     'updated_by' => $userId,
@@ -202,7 +234,7 @@ class supplierBillController extends Controller
                 ->update(['deleted_at' => $now, 'updated_at' => $now]);
 
             $this->replaceItems($billId, $validated['items'], $userId, $now, $isJewelryUser);
-            $this->adjustStock($stockDeltas, $userId);
+            $this->adjustStock($stockDeltas, $userId, 'purchase_adjustment', $billId);
         });
 
         return redirect()
@@ -219,7 +251,7 @@ class supplierBillController extends Controller
             $items = $this->billItems($billId);
             $quantities = $this->quantitiesByProduct($items->all());
             $reversal = array_map(fn ($quantity) => -$quantity, $quantities);
-            $this->adjustStock($reversal, $userId);
+            $this->adjustStock($reversal, $userId, 'purchase_reversal', $billId);
 
             $now = now();
             DB::table('purchasemaster')
@@ -243,7 +275,8 @@ class supplierBillController extends Controller
         int $userId,
         ?int $currentSupplierId = null,
         array $currentProductIds = [],
-        bool $isJewelryUser = false
+        bool $isJewelryUser = false,
+        bool $allowUnknownPartial = false
     ): array {
         $rules = [
             'supplier_id' => [
@@ -263,6 +296,7 @@ class supplierBillController extends Controller
             ],
             'purchase_date' => ['required', 'date'],
             'payment_status' => ['required', Rule::in(['pending', 'partial', 'paid'])],
+            'opening_paid_amount' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => [
@@ -304,6 +338,9 @@ class supplierBillController extends Controller
                 'items.*.tax_percent' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:100'],
                 'items.*.discount_amount' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
             ];
+            if (! $allowUnknownPartial) {
+                $rules['opening_paid_amount'][] = 'required_if:payment_status,partial';
+            }
         }
 
         return $request->validate($rules);
@@ -417,46 +454,24 @@ class supplierBillController extends Controller
         return $quantities;
     }
 
-    private function adjustStock(array $deltas, int $userId): void
+    private function adjustStock(array $deltas, int $userId, string $movementType, int $billId): void
     {
         foreach ($deltas as $productId => $delta) {
-            if ($delta === 0) {
-                continue;
-            }
-
-            $inventory = InventoryMaster::withTrashed()
-                ->where('product_id', $productId)
-                ->lockForUpdate()
-                ->first();
-            $currentQuantity = $inventory && ! $inventory->trashed()
-                ? (int) $inventory->quantity_in_stock
-                : 0;
-            $newQuantity = $currentQuantity + $delta;
-
-            if ($newQuantity < 0 || $newQuantity > 2147483647) {
+            try {
+                app(InventoryLedger::class)->applyMovement(
+                    (int) $productId,
+                    (int) $delta,
+                    $userId,
+                    $movementType,
+                    'supplier_bill',
+                    $billId,
+                    null
+                );
+            } catch (ValidationException $exception) {
                 throw ValidationException::withMessages([
                     'stock' => 'This change would put the stock quantity outside its supported range. Update the stock quantity before editing or deleting this bill.',
                 ]);
             }
-
-            if (! $inventory) {
-                InventoryMaster::create([
-                    'product_id' => $productId,
-                    'quantity_in_stock' => $newQuantity,
-                    'created_by' => $userId,
-                    'updated_by' => $userId,
-                ]);
-
-                continue;
-            }
-
-            if ($inventory->trashed()) {
-                $inventory->restore();
-            }
-
-            $inventory->quantity_in_stock = $newQuantity;
-            $inventory->updated_by = $userId;
-            $inventory->save();
         }
     }
 
@@ -547,18 +562,61 @@ class supplierBillController extends Controller
         return $attributes;
     }
 
-    private function generateBillNumber(int $userId): string
+    private function openingPaidAmount(
+        array $validated,
+        float $grandTotal,
+        mixed $existingAmount = null,
+        bool $preserveUnknown = false
+    ): ?float
     {
-        $prefix = 'BILL'.date('Y').$userId;
-        $lastNumber = DB::table('purchasemaster')
-            ->where('created_by', $userId)
-            ->where('purchase_number', 'like', $prefix.'%')
-            ->orderByDesc('purchase_id')
-            ->value('purchase_number');
-        $sequence = $lastNumber
-            ? (int) substr($lastNumber, strlen($prefix)) + 1
-            : 1;
+        if ($grandTotal === 0.0) {
+            return 0;
+        }
 
-        return $prefix.str_pad((string) $sequence, 5, '0', STR_PAD_LEFT);
+        if ($validated['payment_status'] === 'paid') {
+            return $grandTotal;
+        }
+
+        if ($validated['payment_status'] === 'pending') {
+            return 0;
+        }
+
+        $amount = $validated['opening_paid_amount'] ?? $existingAmount;
+        if ($amount === null) {
+            if ($preserveUnknown) {
+                return null;
+            }
+
+            throw ValidationException::withMessages([
+                'opening_paid_amount' => 'Enter the amount already paid to mark this bill as partial.',
+            ]);
+        }
+
+        if ((float) $amount > $grandTotal) {
+            throw ValidationException::withMessages([
+                'opening_paid_amount' => 'The amount already paid cannot exceed the bill total.',
+            ]);
+        }
+        if ((float) $amount <= 0) {
+            throw ValidationException::withMessages([
+                'opening_paid_amount' => 'A partial bill must have an amount greater than zero.',
+            ]);
+        }
+
+        return (float) $amount;
+    }
+
+    private function paymentStatus(float $paidAmount, float $grandTotal): string
+    {
+        if ($paidAmount >= $grandTotal) {
+            return 'paid';
+        }
+
+        return $paidAmount > 0 ? 'partial' : 'pending';
+    }
+
+    private function moneyCents(mixed $amount): int
+    {
+        return (int) round((float) $amount * 100);
     }
 }

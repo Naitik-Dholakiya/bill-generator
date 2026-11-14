@@ -56,6 +56,7 @@
                                         <td class="px-6 py-4">
                                             <span class="block font-medium text-gray-900 dark:text-white">{{ $product->product_name }}</span>
                                             <span class="text-sm text-gray-500 dark:text-gray-400">{{ $product->product_code }}</span>
+                                            <a href="{{ route('stock.movements', $product->product_id) }}" class="mt-1 block text-xs font-medium text-cyan-700 hover:underline dark:text-cyan-300">View stock history</a>
                                         </td>
                                         <td class="px-6 py-4">{{ $product->category?->category_name ?? '-' }}</td>
                                         <td class="px-6 py-4">

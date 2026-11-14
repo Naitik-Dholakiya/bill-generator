@@ -12,16 +12,18 @@ Vyapar is a Laravel 12 application for multi-workspace customer, supplier, produ
 - **Workspace dashboard:** KPI and sales summaries, invoice status and trend, recent invoices, product/customer/supplier snapshots, and onboarding progress.
 - **Customers and suppliers:** Create, list, detail, edit, and delete flows with workspace ownership.
 - **Products and categories:** Product maintenance, supplier/category associations, pricing, reorder-level display, and category creation from product entry.
-- **Invoices:** Invoice and item create/edit/detail/delete flows; quantity, taxes, discounts, totals, payment status, and PDF generation.
-- **Supplier bills:** Supplier purchase bills with itemized costs/tax/discount, payment status, CRUD, PDF output, and automatic stock increases/reversals when bills are created, edited, or deleted.
-- **Stock:** Current on-hand quantities, reorder warnings, and manual quantity updates. Invoice sales do not automatically deduct stock and a full movement ledger is not maintained.
+- **Invoices:** Invoice and item create/edit/detail/delete flows; quantity, taxes, discounts, totals, payment history, and PDF generation. Invoice numbers are allocated transactionally. Customer, seller, and item descriptions are stored with each invoice; previous invoice versions are retained when an invoice is edited or deleted.
+- **Supplier bills:** Supplier purchase bills with itemized costs/tax/discount, payment history, CRUD, PDF output, and inventory movements when bills are created, edited, or deleted.
+- **Stock:** Current on-hand quantities, reorder warnings, manual adjustments, and a paginated movement history. New invoice sales and jewellery piece counts deduct stock; invoice edits and deletions post compensating movements. Sales are allowed to take stock below zero so existing billing workflows are not blocked; the resulting balance is visible in stock warnings/history.
+- **Payments:** Customer receipts and supplier payments are stored as dated, method/reference-bearing records. Payment status and known balances are recalculated from opening paid amounts and active payment records. Entries are not deleted; a void requires a reason and remains visible in the history.
+- **Dashboard:** Financial queries exclude soft-deleted invoices, and customer/product counts exclude soft-deleted rows. Outstanding balances use recorded payments; legacy partial documents whose paid amount is unknown are identified for reconciliation rather than assigned an invented amount.
 - **Jewellery:** Feature-gated voucher workflows with piece/weight/Touch/wastage and fine-weight calculations. Invoice template keys are configured in `config/invoice.php`.
 - **Settings:** User profile, business identity, and password updates.
 - **Administration:** Workspace metrics and user account management, including status, jewellery feature access, and invoice-template assignment.
 
 ## Planned, not implemented
 
-Supplier payment allocation and a detailed stock-movement ledger are not implemented. Supplier-bill payment status is stored on the bill; individual payments are not recorded.
+Payment records and inventory movement history are implemented. The application does not currently support payment allocation across multiple invoices/bills, refunds, or tax filing.
 
 ## Important routes
 
@@ -33,7 +35,9 @@ Supplier payment allocation and a detailed stock-movement ledger are not impleme
 | `products.*`, `createProductPost`, `editProductPost` | Product workflows |
 | `invoice.*` | Invoice and jewellery voucher workflows |
 | `supplier-bills.*` | Supplier purchase bill list, CRUD, and PDF |
+| `invoice.payments.*`, `supplier-bills.payments.*` | Record or void a payment against one invoice or supplier bill |
 | `stock.*` | Current stock listing and quantity updates |
+| `stock.movements` | Product-specific stock movement history |
 | `settings`, `settings.update`, `changePassword` | Workspace profile/security settings |
 | `admin.*` | Administrator workspace and account management |
 | `privacy-policy`, `user-manual`, `documentation` | Public information pages rendered from `docs/` Markdown |
@@ -42,9 +46,13 @@ Route definitions are in `routes/web.php`. User-facing operations are protected 
 
 ## Data model
 
-Core tables include `usermaster`, `customermaster`, `suppliermaster`, `categorymaster`, `productmaster`, `invoicemaster`, `invoice_items`, `inventorymaster`, `purchasemaster`, and `purchase_items`. Laravel cache and queue tables are also used by the framework. See `database/migrations/` for the authoritative schema and migration history.
+Core tables include `usermaster`, `customermaster`, `suppliermaster`, `categorymaster`, `productmaster`, `invoicemaster`, `invoice_items`, `invoice_revisions`, `invoice_payments`, `inventorymaster`, `inventory_movements`, `purchasemaster`, `purchase_items`, `supplier_bill_payments`, and `document_sequences`. Laravel cache and queue tables are also used by the framework. See `database/migrations/` for the authoritative schema and migration history.
 
 Business rows are associated with a workspace/user identifier. Preserve these ownership filters in new queries and apply `resource.owner` to new ID-based routes so changing a URL ID cannot expose or modify another workspace's records. Unauthorized or missing IDs return 404.
+
+The inventory migration records each current on-hand quantity as an opening movement and only tracks document movements from deployment onward; it does not replay old invoices and risk deducting historical sales twice. Existing invoices remain untracked for stock reversals. Existing pending and paid payment statuses become zero and full opening paid amounts respectively. A legacy partial status has no inferable amount: it stays marked partial with an unknown balance until the operator enters the previous amount when recording the next payment.
+
+Pre-feature invoices are backfilled with the customer, seller, and product details currently present in their master records. Earlier changes to those master records cannot be reconstructed, so only invoices created or edited after this migration have point-in-time snapshots.
 
 ## Local development
 

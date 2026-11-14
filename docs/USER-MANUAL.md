@@ -29,17 +29,17 @@ The Suppliers area stores supplier and contact information, including supplier c
 
 Products include a product code and name, category, supplier, purchase price, selling price, reorder level, and active status. Jewellery-enabled workspaces can also store a default Touch and wastage percentage for eligible products. Categories can be selected or created during product setup.
 
-The Stock area shows the recorded quantity for each active product, highlights products at or below their reorder level, and lets you update the available quantity. Supplier bills add their purchased quantities to stock; editing a bill adjusts the difference, and deleting it reverses the bill quantities. Invoice sales do not automatically deduct stock, and a full stock-movement history is not kept.
+The Stock area shows the recorded quantity for each active product, highlights products at or below their reorder level, and lets you update the available quantity. Use **View stock history** on a product to review opening quantities, supplier-bill receipts/reversals, invoice sales, and manual adjustments. New invoice sales deduct stock. Sales are not blocked when the balance is low, so check the stock warning/history and adjust the recorded quantity when needed. Supplier-bill edits and deletions adjust or reverse their associated movements.
 
 ## 6. Invoices
 
-Create an invoice by selecting a customer and date, adding product rows, and reviewing the calculated line totals and invoice summary. Check the customer, products, rates, tax, discounts, and final total before saving. Invoices can be reviewed, edited, and deleted from the invoice screens. Available payment statuses include pending, partial, and paid.
+Create an invoice by selecting a customer and date, adding product rows, and reviewing the calculated line totals and invoice summary. Check the customer, products, rates, tax, discounts, and final total before saving. Invoices can be reviewed, edited, and deleted from the invoice screens. Invoice details retain the customer, business, and product descriptions used when saved; the previous version is available in **Saved invoice history** after an edit.
 
-Use the invoice detail/PDF actions to view or download the generated invoice. The invoice layout is determined by the account's configured template.
+Use the invoice detail/PDF actions to view or download the generated invoice. The invoice layout is determined by the account's configured template. Record customer receipts from the **Payments** section with the date, amount, method, and optional reference. The remaining balance and payment status update from recorded amounts. A payment cannot exceed the remaining balance. To correct an entry, void it with a reason; the void remains visible in the payment history.
 
 ## 7. Supplier bills
 
-Create a supplier bill by selecting a supplier and date, adding purchased products, and entering quantities, unit costs, tax, and discounts. The bill total is calculated from the line items. Jewellery workspaces instead record pieces, gross/net weights, touch, wastage, fine weight, gold adjustments, and supplier gold balances, matching the jewellery invoice workflow; piece counts still update stock. Supplier bills can be searched, reviewed, edited, deleted, and downloaded as PDFs. Payment status can be marked pending, partial, or paid; the status is a record only and does not track individual payments.
+Create a supplier bill by selecting a supplier and date, adding purchased products, and entering quantities, unit costs, tax, and discounts. The bill total is calculated from the line items. Jewellery workspaces instead record pieces, gross/net weights, touch, wastage, fine weight, gold adjustments, and supplier gold balances, matching the jewellery invoice workflow; piece counts still update stock. Supplier bills can be searched, reviewed, edited, deleted, and downloaded as PDFs. For standard bills, record supplier payments from the **Payments** section with the date, amount, method, and optional reference. The remaining balance and payment status update from recorded amounts. Payments can be voided with a reason and remain in the history.
 
 Saving a bill increases stock quantities. Editing a bill adjusts stock by the difference in item quantities. Deleting a bill reverses the quantities, but is blocked if that would make stock negative. Bills do not automatically change the purchase price on the product record.
 
@@ -49,15 +49,15 @@ Jewellery voucher entry is available only to workspaces whose administrator enab
 
 ## 9. Dashboard
 
-The dashboard summarizes available business and invoice records, including revenue, outstanding invoices, customer/product/supplier counts, invoice status, recent invoices, and sales summaries. A value of zero is different from missing data: some summaries depend on having invoices or invoice items.
+The dashboard summarizes available business and invoice records, including revenue, outstanding invoices, customer/product/supplier counts, invoice status, recent invoices, and sales summaries. A value of zero is different from missing data: some summaries depend on having invoices or invoice items. Legacy partial invoices may show that the previous amount paid needs reconciliation; no amount is assumed for those older records.
 
 ## 10. Settings and account security
 
 Open Settings to update personal details, business name, address, GSTIN, and password. Invoice template and jewellery access may be managed by an administrator. Keep business profile and invoice details accurate before generating customer-facing documents.
 
-## 11. Planned features
+## 11. Payment and stock history notes
 
-Supplier payment allocation and a detailed stock-movement ledger are not currently available.
+The stock history starts with the available balance when movement tracking was enabled; older invoice sales are not replayed. Existing pending and paid payment statuses are migrated as zero and fully paid opening amounts. For an older partial invoice or bill, enter the amount previously paid when recording its next payment so the remaining balance can be calculated accurately. Refunds and payment allocation across multiple documents are not currently available.
 
 ## 12. Help and data questions
 

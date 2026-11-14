@@ -21,6 +21,7 @@ use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\stockController;
 use App\Http\Controllers\supplierBillController;
+use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Http\Request;
@@ -107,6 +108,10 @@ Route::middleware('user.auth')->group(function () {
         ->whereNumber('id')->middleware('resource.owner:suppliermaster,supplier_id,id')->name('supplier.delete');
 
     Route::get('/stock', [stockController::class, 'index'])->name('stock.index');
+    Route::get('/stock/{productId}/movements', [stockController::class, 'movements'])
+        ->whereNumber('productId')
+        ->middleware('resource.owner:productmaster,product_id,productId')
+        ->name('stock.movements');
     Route::put('/stock/{productId}', [stockController::class, 'updateStock'])
         ->whereNumber('productId')
         ->middleware('resource.owner:productmaster,product_id,productId')
@@ -121,6 +126,11 @@ Route::middleware('user.auth')->group(function () {
         ->whereNumber('billId')->middleware('resource.owner:purchasemaster,purchase_id,billId')->name('supplier-bills.pdf');
     Route::get('/supplier-bills/{billId}/edit', [supplierBillController::class, 'edit'])
         ->whereNumber('billId')->middleware('resource.owner:purchasemaster,purchase_id,billId')->name('supplier-bills.edit');
+    Route::post('/supplier-bills/{billId}/payments', [PaymentController::class, 'storeSupplierBill'])
+        ->whereNumber('billId')->middleware('resource.owner:purchasemaster,purchase_id,billId')->name('supplier-bills.payments.store');
+    Route::post('/supplier-bills/{billId}/payments/{paymentId}/void', [PaymentController::class, 'voidSupplierBill'])
+        ->whereNumber('billId')->whereNumber('paymentId')
+        ->middleware('resource.owner:purchasemaster,purchase_id,billId')->name('supplier-bills.payments.void');
     Route::put('/supplier-bills/{billId}', [supplierBillController::class, 'update'])
         ->whereNumber('billId')->middleware('resource.owner:purchasemaster,purchase_id,billId')->name('supplier-bills.update');
     Route::delete('/supplier-bills/{billId}', [supplierBillController::class, 'destroy'])
@@ -145,6 +155,11 @@ Route::middleware('user.auth')->group(function () {
         ->whereNumber('invoice')->middleware('resource.owner:invoicemaster,invoice_id,invoice')->name('invoice.view');
     Route::get('/invoice/{invoice}/edit', [invoiceController::class, 'edit'])
         ->whereNumber('invoice')->middleware('resource.owner:invoicemaster,invoice_id,invoice')->name('invoice.edit');
+    Route::post('/invoice/{invoice}/payments', [PaymentController::class, 'storeInvoice'])
+        ->whereNumber('invoice')->middleware('resource.owner:invoicemaster,invoice_id,invoice')->name('invoice.payments.store');
+    Route::post('/invoice/{invoice}/payments/{paymentId}/void', [PaymentController::class, 'voidInvoice'])
+        ->whereNumber('invoice')->whereNumber('paymentId')
+        ->middleware('resource.owner:invoicemaster,invoice_id,invoice')->name('invoice.payments.void');
     Route::put('/invoice/{invoice}', [invoiceController::class, 'update'])
         ->whereNumber('invoice')->middleware('resource.owner:invoicemaster,invoice_id,invoice')->name('invoice.update');
     Route::delete('/invoice/{invoice}', [invoiceController::class, 'delete'])

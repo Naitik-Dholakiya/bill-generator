@@ -24,7 +24,7 @@ class dashboardController extends Controller
 
         $customersTotal = DB::table('customermaster')
             ->where('created_by', $userId)
-            // ->whereNull('deleted_at')
+            ->whereNull('deleted_at')
             ->count();
 
         $customersNew = DB::table('customermaster')
@@ -47,7 +47,7 @@ class dashboardController extends Controller
 
         $productsTotal = DB::table('productmaster')
             ->where('created_by', $userId)
-            // ->whereNull('deleted_at')
+            ->whereNull('deleted_at')
             ->where('status', '1')
             ->count();
         $reorderWatchCount = DB::table('productmaster as p')
@@ -100,8 +100,10 @@ class dashboardController extends Controller
         $revenueGrowth     = null;   // null = "not enough history yet", not "unwired"
         $outstandingTotal  = 0;
         $outstandingCount  = 0;
+        $unknownOutstandingCount = 0;
         $agedPendingTotal  = 0;
         $agedPendingCount  = 0;
+        $unknownAgedPendingCount = 0;
         $gstCollected      = 0;
         $collectedTotal    = 0;
         $invoicesTotal     = 0;
@@ -114,7 +116,9 @@ class dashboardController extends Controller
         $recentInvoices    = collect();
 
         if ($hasInvoices) {
-            $invoiceBase = DB::table('invoicemaster')->where('created_by', $userId);
+            $invoiceBase = DB::table('invoicemaster')
+                ->where('created_by', $userId)
+                ->whereNull('deleted_at');
 
             $invoicesTotal = (clone $invoiceBase)->count();
 
@@ -131,23 +135,59 @@ class dashboardController extends Controller
             }
 
             $outstanding = (clone $invoiceBase)->whereIn('payment_status', ['pending', 'partial']);
-            $outstandingTotal = (clone $outstanding)->sum('grand_total');
             $outstandingCount = (clone $outstanding)->count();
+            $unknownOutstandingCount = (clone $outstanding)
+                ->whereNull('opening_paid_amount')
+                ->count();
+
+            $paymentTotals = DB::table('invoice_payments')
+                ->select('invoice_id', DB::raw('SUM(amount) as paid_amount'))
+                ->whereNull('voided_at')
+                ->groupBy('invoice_id');
+            $knownOutstanding = DB::table('invoicemaster as i')
+                ->leftJoinSub($paymentTotals, 'payments', 'payments.invoice_id', '=', 'i.invoice_id')
+                ->where('i.created_by', $userId)
+                ->whereNull('i.deleted_at')
+                ->whereIn('i.payment_status', ['pending', 'partial'])
+                ->whereNotNull('i.opening_paid_amount');
+            $dueExpression = 'CASE WHEN i.grand_total - i.opening_paid_amount - COALESCE(payments.paid_amount, 0) > 0 THEN i.grand_total - i.opening_paid_amount - COALESCE(payments.paid_amount, 0) ELSE 0 END';
+            $outstandingTotal = (float) (clone $knownOutstanding)->sum(DB::raw($dueExpression));
 
             $agedPending = (clone $invoiceBase)
                 ->where('payment_status', '!=', 'paid')
                 ->where('invoice_date', '<=', $now->copy()->subDays(30));
-            $agedPendingTotal = (clone $agedPending)->sum('grand_total');
             $agedPendingCount = (clone $agedPending)->count();
+            $unknownAgedPendingCount = (clone $agedPending)
+                ->whereNull('opening_paid_amount')
+                ->count();
+            $agedPendingTotal = (float) (clone $knownOutstanding)
+                ->where('i.invoice_date', '<=', $now->copy()->subDays(30))
+                ->sum(DB::raw($dueExpression));
 
             $gstCollected = (clone $invoiceBase)
                 ->whereBetween('invoice_date', [$monthStart, $now])
                 ->sum('total_tax');
 
-            $collectedTotal = (clone $invoiceBase)
-                ->whereBetween('invoice_date', [$monthStart, $now])
-                ->where('payment_status', 'paid')
-                ->sum('grand_total');
+            $collectedTotal = (float) DB::table('invoice_payments as payments')
+                ->join('invoicemaster as i', 'i.invoice_id', '=', 'payments.invoice_id')
+                ->where('i.created_by', $userId)
+                ->whereNull('i.deleted_at')
+                ->whereNull('payments.voided_at')
+                ->whereBetween('payments.paid_at', [$monthStart->toDateString(), $now->toDateString()])
+                ->sum('payments.amount');
+            $collectedTotal += (float) DB::table('invoicemaster as i')
+                ->where('i.created_by', $userId)
+                ->whereNull('i.deleted_at')
+                ->where('i.payment_status', 'paid')
+                ->where('i.opening_paid_amount', '>', 0)
+                ->whereBetween('i.invoice_date', [$monthStart, $now])
+                ->whereNotExists(function ($query) {
+                    $query->selectRaw('1')
+                        ->from('invoice_payments as payments')
+                        ->whereColumn('payments.invoice_id', 'i.invoice_id')
+                        ->whereNull('payments.voided_at');
+                })
+                ->sum('i.opening_paid_amount');
 
             $avgInvoiceValue = $invoicesTotal > 0
                 ? (clone $invoiceBase)->avg('grand_total')
@@ -174,6 +214,8 @@ class dashboardController extends Controller
             $topCustomers = DB::table('invoicemaster as i')
                 ->join('customermaster as c', 'i.customer_id', '=', 'c.customer_id')
                 ->where('i.created_by', $userId)
+                ->whereNull('i.deleted_at')
+                ->whereNull('c.deleted_at')
                 ->groupBy('c.customer_id', 'c.customer_name', 'c.customer_code', 'c.gst_number')
                 ->orderByDesc(DB::raw('SUM(i.grand_total)'))
                 ->limit(5)
@@ -188,12 +230,14 @@ class dashboardController extends Controller
             $recentInvoices = DB::table('invoicemaster as i')
                 ->join('customermaster as c', 'i.customer_id', '=', 'c.customer_id')
                 ->where('i.created_by', $userId)
+                ->whereNull('i.deleted_at')
+                ->whereNull('c.deleted_at')
                 ->orderByDesc('i.invoice_date')
                 ->limit(8)
                 ->get([
                     'i.invoice_id',
                     'i.invoice_number',
-                    'c.customer_name',
+                    DB::raw('COALESCE(i.customer_name_snapshot, c.customer_name) as customer_name'),
                     'i.invoice_date',
                     'i.total_tax',
                     'i.discount_amount',
@@ -207,6 +251,10 @@ class dashboardController extends Controller
                     ->join('productmaster as p', 'ii.product_id', '=', 'p.product_id')
                     ->join('categorymaster as cat', 'p.category_id', '=', 'cat.category_id')
                     ->where('i.created_by', $userId)
+                    ->whereNull('i.deleted_at')
+                    ->whereNull('ii.deleted_at')
+                    ->whereNull('p.deleted_at')
+                    ->whereNull('cat.deleted_at')
                     ->groupBy('p.product_id', 'p.product_name', 'cat.category_name')
                     ->orderByDesc(DB::raw('SUM(ii.line_total)'))
                     ->limit(5)
@@ -222,6 +270,10 @@ class dashboardController extends Controller
                     ->join('productmaster as p', 'ii.product_id', '=', 'p.product_id')
                     ->join('categorymaster as cat', 'p.category_id', '=', 'cat.category_id')
                     ->where('i.created_by', $userId)
+                    ->whereNull('i.deleted_at')
+                    ->whereNull('ii.deleted_at')
+                    ->whereNull('p.deleted_at')
+                    ->whereNull('cat.deleted_at')
                     ->groupBy('cat.category_id', 'cat.category_name')
                     ->get([
                         'cat.category_name',
@@ -241,8 +293,10 @@ class dashboardController extends Controller
             'revenue_growth'      => $revenueGrowth,
             'outstanding_total'   => $outstandingTotal,
             'outstanding_count'   => $outstandingCount,
+            'unknown_outstanding_count' => $unknownOutstandingCount,
             'aged_pending_total'  => $agedPendingTotal,
             'aged_pending_count'  => $agedPendingCount,
+            'unknown_aged_pending_count' => $unknownAgedPendingCount,
             'gst_collected'       => $gstCollected,
             'customers_total'     => $customersTotal,
             'customers_new'       => $customersNew,
