@@ -11,6 +11,10 @@
 
             @include('layout.navbar', ['title' => 'Invoices'])
 
+            @if (session('warning'))
+                <div role="status" class="mx-6 mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">{{ session('warning') }}</div>
+            @endif
+
             <main class="flex-1 overflow-y-auto p-6">
 
                 <!-- Page Header -->

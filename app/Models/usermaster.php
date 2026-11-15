@@ -29,6 +29,7 @@ class usermaster extends Authenticatable
         'company_name',
         'company_address',
         'company_gstin',
+        'stock_negative_policy',
         'status',
     ];
 

@@ -17,12 +17,14 @@ class InventoryMaster extends Model
     protected $fillable = [
         'product_id',
         'quantity_in_stock',
+        'weight_in_stock',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
         'quantity_in_stock' => 'integer',
+        'weight_in_stock' => 'decimal:3',
     ];
 
     public function product(): BelongsTo

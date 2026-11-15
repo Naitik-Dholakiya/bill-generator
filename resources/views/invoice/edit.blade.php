@@ -13,6 +13,12 @@
                 @if (session('error'))
                     <div class="mb-6 rounded-xl bg-red-100 px-4 py-3 text-red-700">{{ session('error') }}</div>
                 @endif
+                @if ($errors->any())
+                    <div role="alert" class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+                        <p class="font-semibold">Please correct the following before saving:</p>
+                        <ul class="mt-1 list-inside list-disc">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+                    </div>
+                @endif
 
                 <!-- Page Header -->
                 <div class="mb-6">

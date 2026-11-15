@@ -12,7 +12,14 @@
                     <div>
                         <a href="{{ route('stock.index') }}" class="text-sm font-medium text-cyan-700 hover:underline dark:text-cyan-300">← Stock</a>
                         <h1 class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ $product->product_name }} · Stock History</h1>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ $product->product_code }} · Current on hand: {{ number_format((int) ($product->inventory?->quantity_in_stock ?? 0)) }}</p>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            {{ $product->product_code }} · Current on hand:
+                            @if ($isJewelryUser)
+                                {{ number_format((float) ($product->inventory?->weight_in_stock ?? 0), 3) }} g net
+                            @else
+                                {{ number_format((int) ($product->inventory?->quantity_in_stock ?? 0)) }}
+                            @endif
+                        </p>
                     </div>
                 </div>
 
@@ -38,10 +45,12 @@
                                             {{ $movement->reference_type ? str_replace('_', ' ', $movement->reference_type) : '—' }}
                                             @if ($movement->reference_id)<span class="text-gray-500">#{{ $movement->reference_id }}</span>@endif
                                         </td>
-                                        <td class="px-5 py-4 text-right font-semibold tabular-nums {{ $movement->quantity_delta < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400' }}">
-                                            {{ $movement->quantity_delta > 0 ? '+' : '' }}{{ number_format($movement->quantity_delta) }}
+                                        @php($delta = $isJewelryUser ? (float) ($movement->weight_delta ?? 0) : (int) $movement->quantity_delta)
+                                        @php($after = $isJewelryUser ? (float) ($movement->weight_after ?? 0) : (int) $movement->quantity_after)
+                                        <td class="px-5 py-4 text-right font-semibold tabular-nums {{ $delta < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400' }}">
+                                            {{ $delta > 0 ? '+' : '' }}{{ number_format($delta, $isJewelryUser ? 3 : 0) }}{{ $isJewelryUser ? ' g' : '' }}
                                         </td>
-                                        <td class="px-5 py-4 text-right tabular-nums {{ $movement->quantity_after < 0 ? 'font-semibold text-red-600 dark:text-red-400' : '' }}">{{ number_format($movement->quantity_after) }}</td>
+                                        <td class="px-5 py-4 text-right tabular-nums {{ $after < 0 ? 'font-semibold text-red-600 dark:text-red-400' : '' }}">{{ number_format($after, $isJewelryUser ? 3 : 0) }}{{ $isJewelryUser ? ' g' : '' }}</td>
                                         <td class="px-5 py-4 text-gray-600 dark:text-gray-300">{{ $movement->notes ?: '—' }}</td>
                                     </tr>
                                 @empty

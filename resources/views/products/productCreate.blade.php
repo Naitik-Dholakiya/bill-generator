@@ -25,6 +25,12 @@
 
                 <form action="{{ route('createProductPost') }}" method="POST">
                     @csrf
+                    @if ($errors->any())
+                        <div role="alert" class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+                            <p class="font-semibold">Please correct the following:</p>
+                            <ul class="mt-1 list-inside list-disc">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+                        </div>
+                    @endif
 
                     <div
                         class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
@@ -110,6 +116,7 @@
                                         @endforeach
 
                                     </select>
+                                    @error('dd_supplier')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                                 </div>
 
                                 <!-- Category -->
@@ -136,6 +143,7 @@
                                             @endforeach
 
                                         </select>
+                                        @error('dd_category')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
 
                                         <button type="button" onclick="openCategoryModal()"
                                             class="px-4 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white">
@@ -158,9 +166,10 @@
                                                 Purchase Price <span class="text-red-500">*</span>
                                             </label>
 
-                                            <input type="number" step="0.01" name="tb_purchase_price"
+                                            <input type="number" step="0.01" min="0" max="99999999.99" name="tb_purchase_price" required
                                                 value="{{ old('tb_purchase_price') }}"
                                                 class="w-full px-4 py-3 rounded-xl bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700">
+                                            @error('tb_purchase_price')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                                         </div>
 
                                         <!-- Selling Price -->
@@ -169,9 +178,10 @@
                                                 Selling Price <span class="text-red-500">*</span>
                                             </label>
 
-                                            <input type="number" step="0.01" name="tb_selling_price"
+                                            <input type="number" step="0.01" min="0" max="99999999.99" name="tb_selling_price" required
                                                 value="{{ old('tb_selling_price') }}"
                                                 class="w-full px-4 py-3 rounded-xl bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700">
+                                            @error('tb_selling_price')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                                         </div>
 
                                         @if ($isJewelryUser)
@@ -206,12 +216,14 @@
                                         <!-- Reorder Level -->
                                         <div>
                                             <label class="block text-sm font-medium mb-2">
-                                                Reorder Level <span class="text-red-500">*</span>
+                                                Reorder Level{{ $isJewelryUser ? ' (g)' : '' }} <span class="text-red-500">*</span>
                                             </label>
 
-                                            <input type="number" name="tb_reorder_level"
-                                                value="{{ old('tb_reorder_level') }}"
+                                            <input type="number" name="{{ $isJewelryUser ? 'tb_reorder_weight_level' : 'tb_reorder_level' }}"
+                                                min="0" max="{{ $isJewelryUser ? '999999999.999' : '2147483647' }}" step="{{ $isJewelryUser ? '0.001' : '1' }}" required
+                                                value="{{ old($isJewelryUser ? 'tb_reorder_weight_level' : 'tb_reorder_level', 0) }}"
                                                 class="w-full px-4 py-3 rounded-xl bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700">
+                                            @error($isJewelryUser ? 'tb_reorder_weight_level' : 'tb_reorder_level')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                                         </div>
 
                                     </div>

@@ -79,11 +79,12 @@ class invoiceController extends Controller
             ? array_map(fn ($item) => (object) (is_array($item) ? $item : []), $oldItems)
             : []);
         $isJewelryUser = $this->isJewelryUser($userId);
+        $goldBalances = $isJewelryUser ? $this->latestGoldBalances((int) $userId) : [];
 
         $view = $isJewelryUser ? 'invoice.jewellery.add' : 'invoice.create';
         $rows = $formItems->isEmpty() ? collect([(object) []]) : $formItems;
 
-        return view($view, compact('customers', 'products', 'invoiceNumber', 'formItems', 'rows', 'isJewelryUser'));
+        return view($view, compact('customers', 'products', 'invoiceNumber', 'formItems', 'rows', 'isJewelryUser', 'goldBalances'));
     }
 
     public function edit(int $invoiceId)
@@ -104,6 +105,7 @@ class invoiceController extends Controller
             ->select('it.*', 'p.touch as product_touch', 'p.default_wastage as product_default_wastage')
             ->get();
         $isJewelryUser = $this->isJewelryUser($userId);
+        $goldBalances = $isJewelryUser ? $this->latestGoldBalances((int) $userId, $invoiceId) : [];
 
         $customers = DB::table('customermaster')
             ->where('created_by', $userId)
@@ -144,7 +146,7 @@ class invoiceController extends Controller
 
         $view = $isJewelryUser ? 'invoice.jewellery.edit' : 'invoice.edit';
 
-        return view($view, compact('invoice', 'items', 'rows', 'customers', 'products', 'isJewelryUser'));
+        return view($view, compact('invoice', 'items', 'rows', 'customers', 'products', 'isJewelryUser', 'goldBalances'));
     }
 
     public function view(int $invoiceId)
@@ -210,8 +212,9 @@ class invoiceController extends Controller
             ->first();
 
         abort_if(!$invoice, 404, 'Invoice not found.');
+        $isJewelryUser = $this->isJewelryUser($userId);
 
-        DB::transaction(function () use ($invoiceId, $userId) {
+        DB::transaction(function () use ($invoiceId, $userId, $isJewelryUser) {
             $invoice = DB::table('invoicemaster')
                 ->where('invoice_id', $invoiceId)
                 ->where('created_by', $userId)
@@ -228,17 +231,32 @@ class invoiceController extends Controller
             $this->recordInvoiceRevision($invoice, $items, (int) $userId);
 
             if ($invoice->stock_tracked) {
-                foreach ($this->quantitiesByItems($items) as $productId => $quantity) {
-                    app(InventoryLedger::class)->applyMovement(
-                        $productId,
-                        $quantity,
-                        (int) $userId,
-                        'sale_reversal',
-                        'invoice',
-                        $invoiceId,
-                        'Invoice deleted.',
-                        true
-                    );
+                if ($isJewelryUser) {
+                    foreach ($this->weightsByItems($items) as $productId => $weight) {
+                        app(InventoryLedger::class)->applyWeightMovement(
+                            $productId,
+                            $weight,
+                            (int) $userId,
+                            'sale_reversal',
+                            'invoice',
+                            $invoiceId,
+                            'Jewellery voucher deleted.',
+                            true
+                        );
+                    }
+                } else {
+                    foreach ($this->quantitiesByItems($items) as $productId => $quantity) {
+                        app(InventoryLedger::class)->applyMovement(
+                            $productId,
+                            $quantity,
+                            (int) $userId,
+                            'sale_reversal',
+                            'invoice',
+                            $invoiceId,
+                            'Invoice deleted.',
+                            true
+                        );
+                    }
                 }
             }
 
@@ -279,7 +297,7 @@ class invoiceController extends Controller
         $rules = [
             'customer_id' => ['required', 'integer', Rule::exists('customermaster', 'customer_id')->where('created_by', $userId)],
             'invoice_date' => ['required', 'date'],
-            'notes' => ['nullable', 'string'],
+            'notes' => ['nullable', 'string', 'max:2000'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => [
                 'required',
@@ -288,17 +306,18 @@ class invoiceController extends Controller
                     $query->where('created_by', $userId)->whereNull('deleted_at');
                 }),
             ],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
-            'items.*.tax_amount' => ['nullable', 'numeric', 'min:0'],
-            'items.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
+            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:2147483647'],
+            'items.*.unit_price' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
+            'items.*.tax_amount' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
+            'items.*.discount_amount' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
         ];
         if ($isJewelryUser) {
             $rules['items.*.touch'] = ['nullable', 'numeric', 'between:0,100', 'decimal:0,3'];
         }
         $validated = $request->validate($rules);
+        $allowNegativeStock = $this->stockNegativePolicy((int) $userId) !== 'block';
 
-        DB::transaction(function () use ($validated, $invoiceId, $userId, $isJewelryUser) {
+        DB::transaction(function () use ($validated, $invoiceId, $userId, $isJewelryUser, $allowNegativeStock) {
             $invoice = DB::table('invoicemaster')
                 ->where('invoice_id', $invoiceId)
                 ->where('created_by', $userId)
@@ -334,6 +353,11 @@ class invoiceController extends Controller
             }
 
             $grandTotal = round($grandTotal, 2);
+            if (max($subtotal, $totalTax, $totalDiscount, $grandTotal) > 9999999999.99) {
+                throw ValidationException::withMessages([
+                    'items' => 'The invoice total exceeds the supported amount.',
+                ]);
+            }
             $openingPaidAmount = $invoice->opening_paid_amount === null ? null : (float) $invoice->opening_paid_amount;
             $recordedPayments = (float) DB::table('invoice_payments')
                 ->where('invoice_id', $invoiceId)
@@ -359,7 +383,7 @@ class invoiceController extends Controller
                         'invoice',
                         $invoiceId,
                         'Invoice items updated.',
-                        true
+                        $allowNegativeStock
                     );
                 }
             }
@@ -418,9 +442,18 @@ class invoiceController extends Controller
             }
         });
 
-        return redirect()
+        $warning = $this->stockNegativePolicy((int) $userId) === 'warn_allow'
+            ? $this->negativeStockWarning((int) $userId, DB::table('invoice_items')->where('invoice_id', $invoiceId)->whereNull('deleted_at')->pluck('product_id')->all(), false)
+            : null;
+
+        $response = redirect()
             ->route('invoice.index')
-            ->with('success', 'Invoice updated successfully.');
+            ->with('success', 'Invoice updated successfully');
+        if ($warning !== null) {
+            $response->with('warning', $warning);
+        }
+
+        return $response;
     }
 
     public function createInvoicePost(Request $request)
@@ -430,13 +463,10 @@ class invoiceController extends Controller
         if ($isJewelryUser) {
             return $this->saveJewelryInvoice($request, $userId);
         }
+        $allowNegativeStock = $this->stockNegativePolicy((int) $userId) !== 'block';
 
         $rules = [
-            'invoice_number' => [
-                'required',
-                'string',
-                'max:50'
-            ],
+            'invoice_number' => ['required', 'string', 'max:50'],
 
             'customer_id' => [
                 'required',
@@ -452,36 +482,42 @@ class invoiceController extends Controller
             'subtotal' => [
                 'required',
                 'numeric',
-                'min:0'
+                'min:0',
+                'max:9999999999.99'
             ],
 
             'total_tax' => [
                 'required',
                 'numeric',
-                'min:0'
+                'min:0',
+                'max:9999999999.99'
             ],
 
             'discount_amount' => [
                 'required',
                 'numeric',
-                'min:0'
+                'min:0',
+                'max:9999999999.99'
             ],
 
             'grand_total' => [
                 'required',
                 'numeric',
-                'min:0'
+                'min:0',
+                'max:9999999999.99'
             ],
 
             'notes' => [
                 'nullable',
-                'string'
+                'string',
+                'max:2000'
             ],
 
             'items' => [
                 'required',
                 'array',
-                'min:1'
+                'min:1',
+                'max:2147483647'
             ],
 
             'items.*.product_id' => [
@@ -503,19 +539,25 @@ class invoiceController extends Controller
             'items.*.unit_price' => [
                 'required',
                 'numeric',
-                'min:0'
+                'decimal:0,2',
+                'min:0',
+                'max:99999999.99'
             ],
 
             'items.*.tax_amount' => [
                 'nullable',
                 'numeric',
-                'min:0'
+                'decimal:0,2',
+                'min:0',
+                'max:9999999999.99'
             ],
 
             'items.*.discount_amount' => [
                 'nullable',
                 'numeric',
-                'min:0'
+                'decimal:0,2',
+                'min:0',
+                'max:9999999999.99'
             ],
 
         ];
@@ -572,6 +614,11 @@ class invoiceController extends Controller
             $totalDiscount = round($totalDiscount, 2);
 
             $grandTotal = round($grandTotal, 2);
+            if (max($subtotal, $totalTax, $totalDiscount, $grandTotal) > 9999999999.99) {
+                throw ValidationException::withMessages([
+                    'items' => 'The invoice total exceeds the supported amount.',
+                ]);
+            }
 
             $invoiceId = DB::table('invoicemaster')->insertGetId([
                 'invoice_number' => $invoiceNumber,
@@ -651,20 +698,28 @@ class invoiceController extends Controller
                     'invoice',
                     $invoiceId,
                     'Invoice sale.',
-                    true
+                    $allowNegativeStock
                 );
             }
 
             DB::commit();
 
-            return redirect()
+            $warning = $this->stockNegativePolicy((int) $userId) === 'warn_allow'
+                ? $this->negativeStockWarning((int) $userId, array_column($validated['items'], 'product_id'), false)
+                : null;
+            $response = redirect()
                 ->route('invoice.index')
-                ->with(
-                    'success',
-                    'Invoice created successfully.'
-                );
+                ->with('success', 'Invoice created successfully.');
+            if ($warning !== null) {
+                $response->with('warning', $warning);
+            }
+
+            return $response;
             // return $this->pdf($invoiceId);
 
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            throw $e;
         } catch (\Throwable $e) {
             DB::rollBack();
             report($e);
@@ -726,6 +781,71 @@ class invoiceController extends Controller
         return $quantities;
     }
 
+    private function weightsByItems(array $items): array
+    {
+        $weights = [];
+        foreach ($items as $item) {
+            $productId = (int) (is_array($item) ? $item['product_id'] : $item->product_id);
+            $weight = (float) (is_array($item) ? ($item['net_weight'] ?? 0) : ($item->net_weight ?? 0));
+            $weights[$productId] = round(($weights[$productId] ?? 0) + $weight, 3);
+        }
+
+        return $weights;
+    }
+
+    private function latestGoldBalances(int $userId, ?int $beforeInvoiceId = null): array
+    {
+        $query = DB::table('invoicemaster')
+            ->where('created_by', $userId)
+            ->whereNull('deleted_at')
+            ->whereNotNull('closing_gold');
+        if ($beforeInvoiceId !== null) {
+            $query->where('invoice_id', '<', $beforeInvoiceId);
+        }
+
+        $balances = [];
+        foreach ($query->orderByDesc('invoice_id')->get(['customer_id', 'closing_gold']) as $row) {
+            $balances[(int) $row->customer_id] ??= (float) $row->closing_gold;
+        }
+
+        return $balances;
+    }
+
+    private function stockNegativePolicy(int $userId): string
+    {
+        $policy = DB::table('usermaster')
+            ->where('user_id', $userId)
+            ->value('stock_negative_policy');
+
+        return in_array($policy, ['warn_allow', 'block', 'allow'], true) ? $policy : 'warn_allow';
+    }
+
+    private function negativeStockWarning(int $userId, array $productIds, bool $isJewelryUser): ?string
+    {
+        $productIds = array_values(array_unique(array_map('intval', $productIds)));
+        if ($productIds === []) {
+            return null;
+        }
+
+        $stockColumn = $isJewelryUser ? 'i.weight_in_stock' : 'i.quantity_in_stock';
+        $products = DB::table('productmaster as p')
+            ->join('inventorymaster as i', 'i.product_id', '=', 'p.product_id')
+            ->where('p.created_by', $userId)
+            ->whereIn('p.product_id', $productIds)
+            ->whereRaw("{$stockColumn} < 0")
+            ->orderBy('p.product_name')
+            ->limit(5)
+            ->pluck('p.product_name');
+
+        if ($products->isEmpty()) {
+            return null;
+        }
+
+        $unit = $isJewelryUser ? ' g net weight' : ' units';
+
+        return 'Sale saved, but stock is below zero for '.implode(', ', $products->all()).$unit.'.';
+    }
+
     private function paymentStatus(float $paidAmount, float $grandTotal): string
     {
         if ($paidAmount >= $grandTotal) {
@@ -765,13 +885,13 @@ class invoiceController extends Controller
             'invoice_number' => ['required', 'string', 'max:50'],
             'customer_id' => ['required', 'integer', Rule::exists('customermaster', 'customer_id')->where('created_by', $userId)],
             'invoice_date' => ['required', 'date'],
-            'notes' => ['nullable', 'string'],
+            'notes' => ['nullable', 'string', 'max:2000'],
             'voucher_section' => ['required', 'string', 'max:50'],
-            'less_kasar' => ['nullable', 'numeric', 'min:0'],
-            'rate_cut_weight' => ['nullable', 'numeric', 'min:0'],
-            'other_convert_fine' => ['nullable', 'numeric', 'min:0'],
-            'opening_gold' => ['nullable', 'numeric', 'min:0'],
-            'closing_gold' => ['nullable', 'numeric', 'min:0'],
+            'less_kasar' => ['nullable', 'numeric', 'decimal:0,3', 'min:0', 'max:9999999.999'],
+            'rate_cut_weight' => ['nullable', 'numeric', 'decimal:0,3', 'min:0', 'max:9999999.999'],
+            'other_convert_fine' => ['nullable', 'numeric', 'decimal:0,3', 'min:0', 'max:9999999.999'],
+            'opening_gold' => ['nullable', 'numeric', 'decimal:0,3', 'min:0', 'max:9999999.999'],
+            'closing_gold' => ['nullable', 'numeric', 'decimal:0,3', 'min:0', 'max:9999999.999'],
             'footer_note' => ['nullable', 'string', 'max:500'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => [
@@ -793,16 +913,29 @@ class invoiceController extends Controller
                         });
                 }),
             ],
-            'items.*.pcs' => ['required', 'integer', 'min:1'],
-            'items.*.gross_weight' => ['nullable', 'numeric', 'min:0'],
-            'items.*.net_weight' => ['nullable', 'numeric', 'min:0'],
+            'items.*.pcs' => ['required', 'integer', 'min:1', 'max:2147483647'],
+            'items.*.gross_weight' => ['nullable', 'numeric', 'decimal:0,3', 'min:0', 'max:9999999.999'],
+            'items.*.net_weight' => ['required', 'numeric', 'decimal:0,3', 'gt:0', 'max:9999999.999'],
             'items.*.touch' => ['nullable', 'numeric', 'between:0,100', 'decimal:0,3'],
             'items.*.wastage' => ['nullable', 'numeric', 'between:0,100', 'decimal:0,3'],
         ]);
+        foreach ($validated['items'] as $index => $item) {
+            if (isset($item['gross_weight']) && (float) $item['gross_weight'] < (float) $item['net_weight']) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.gross_weight" => 'Gross weight must be at least the net weight.',
+                ]);
+            }
+            if ((float) ($item['touch'] ?? 0) + (float) ($item['wastage'] ?? 0) > 100) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.wastage" => 'Touch plus wastage cannot exceed 100%.',
+                ]);
+            }
+        }
 
         $now = now();
+        $allowNegativeStock = $this->stockNegativePolicy((int) $userId) !== 'block';
 
-        DB::transaction(function () use ($validated, $userId, $invoiceId, $now) {
+        DB::transaction(function () use ($validated, $userId, $invoiceId, $now, $allowNegativeStock) {
             $existingInvoice = null;
             $oldItems = [];
             if ($invoiceId !== null) {
@@ -819,6 +952,45 @@ class invoiceController extends Controller
                     ->get()
                     ->all();
                 $this->recordInvoiceRevision($existingInvoice, $oldItems, (int) $userId);
+            }
+
+            DB::table('customermaster')
+                ->where('customer_id', $validated['customer_id'])
+                ->where('created_by', $userId)
+                ->lockForUpdate()
+                ->first();
+            $latestGoldQuery = DB::table('invoicemaster')
+                ->where('customer_id', $validated['customer_id'])
+                ->where('created_by', $userId)
+                ->whereNull('deleted_at')
+                ->whereNotNull('closing_gold');
+            if ($invoiceId !== null) {
+                $latestGoldQuery->where('invoice_id', '<', $invoiceId);
+            }
+            $previousClosingGold = $latestGoldQuery
+                ->orderByDesc('invoice_id')
+                ->value('closing_gold');
+            $openingGold = $previousClosingGold !== null
+                ? (float) $previousClosingGold
+                : (float) ($validated['opening_gold'] ?? 0);
+            $currentInvoiceGold = 0.0;
+            foreach ($validated['items'] as $item) {
+                $currentInvoiceGold += (float) $item['net_weight']
+                    * ((float) ($item['touch'] ?? 0) + (float) ($item['wastage'] ?? 0)) / 100;
+            }
+            $currentInvoiceGold = round($currentInvoiceGold, 3);
+            if ($currentInvoiceGold > 9999999.999) {
+                throw ValidationException::withMessages([
+                    'items' => 'The total fine weight exceeds the supported balance range.',
+                ]);
+            }
+            $closingGold = isset($validated['closing_gold'])
+                ? (float) $validated['closing_gold']
+                : round($openingGold + $currentInvoiceGold, 3);
+            if ($closingGold > 9999999.999) {
+                throw ValidationException::withMessages([
+                    'closing_gold' => 'The closing gold exceeds the supported balance range.',
+                ]);
             }
 
             $headerSnapshot = $this->invoiceSnapshot((int) $userId, (int) $validated['customer_id']);
@@ -839,9 +1011,9 @@ class invoiceController extends Controller
                 'rate_cut_amount' => null,
                 'other_convert_fine' => $validated['other_convert_fine'] ?? null,
                 'opening_balance' => null,
-                'opening_gold' => $validated['opening_gold'] ?? null,
+                'opening_gold' => $openingGold,
                 'closing_balance' => null,
-                'closing_gold' => $validated['closing_gold'] ?? null,
+                'closing_gold' => $closingGold,
                 'closing_gold_type' => 'Dr',
                 'footer_note' => $validated['footer_note'] ?? null,
                 ...$headerSnapshot,
@@ -870,32 +1042,32 @@ class invoiceController extends Controller
                     ->update(['deleted_at' => $now, 'updated_at' => $now]);
             }
 
-            $newQuantities = $this->quantitiesByItems($validated['items']);
+            $newWeights = $this->weightsByItems($validated['items']);
             if ($existingInvoice?->stock_tracked) {
-                $oldQuantities = $this->quantitiesByItems($oldItems);
-                foreach (array_unique(array_merge(array_keys($oldQuantities), array_keys($newQuantities))) as $productId) {
-                    app(InventoryLedger::class)->applyMovement(
+                $oldWeights = $this->weightsByItems($oldItems);
+                foreach (array_unique(array_merge(array_keys($oldWeights), array_keys($newWeights))) as $productId) {
+                    app(InventoryLedger::class)->applyWeightMovement(
                         (int) $productId,
-                        ($oldQuantities[$productId] ?? 0) - ($newQuantities[$productId] ?? 0),
+                        ($oldWeights[$productId] ?? 0) - ($newWeights[$productId] ?? 0),
                         (int) $userId,
                         'sale_adjustment',
                         'invoice',
                         $invoiceId,
                         'Jewellery voucher items updated.',
-                        true
+                        $allowNegativeStock
                     );
                 }
             } elseif ($existingInvoice === null) {
-                foreach ($newQuantities as $productId => $quantity) {
-                    app(InventoryLedger::class)->applyMovement(
+                foreach ($newWeights as $productId => $weight) {
+                    app(InventoryLedger::class)->applyWeightMovement(
                         (int) $productId,
-                        -$quantity,
+                        -$weight,
                         (int) $userId,
                         'sale',
                         'invoice',
                         $invoiceId,
                         'Jewellery voucher sale.',
-                        true
+                        $allowNegativeStock
                     );
                 }
             }
@@ -931,9 +1103,17 @@ class invoiceController extends Controller
             }
         });
 
-        return redirect()
+        $warning = $this->stockNegativePolicy((int) $userId) === 'warn_allow'
+            ? $this->negativeStockWarning((int) $userId, array_column($validated['items'], 'product_id'), true)
+            : null;
+        $response = redirect()
             ->route('invoice.index')
             ->with('success', $isUpdate ? 'Jewellery voucher saved successfully.' : 'Jewellery voucher created successfully.');
+        if ($warning !== null) {
+            $response->with('warning', $warning);
+        }
+
+        return $response;
     }
 
     private function isJewelryUser($userId): bool

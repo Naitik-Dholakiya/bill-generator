@@ -27,9 +27,11 @@ The Suppliers area stores supplier and contact information, including supplier c
 
 ## 5. Products and categories
 
-Products include a product code and name, category, supplier, purchase price, selling price, reorder level, and active status. Jewellery-enabled workspaces can also store a default Touch and wastage percentage for eligible products. Categories can be selected or created during product setup.
+Products include a product code and name, category, supplier, purchase price, selling price, reorder level, and active status. Standard workspaces use integer quantities; jewellery-enabled workspaces use net grams for stock and reorder thresholds. Jewellery workspaces can also store default Touch and wastage percentages for eligible products. Categories can be selected or created during product setup.
 
-The Stock area shows the recorded quantity for each active product, highlights products at or below their reorder level, and lets you update the available quantity. Use **View stock history** on a product to review opening quantities, supplier-bill receipts/reversals, invoice sales, and manual adjustments. New invoice sales deduct stock. Sales are not blocked when the balance is low, so check the stock warning/history and adjust the recorded quantity when needed. Supplier-bill edits and deletions adjust or reverse their associated movements.
+The Stock area shows the recorded quantity or net weight for each active product, highlights products at or below their matching reorder level, and lets you update the available balance. Jewellery quantities are recorded to three decimal places in grams. Existing piece-count balances are not converted automatically; verify and enter an opening net-weight balance after jewellery stock tracking is enabled. Use **View stock history** to review tracked supplier-bill receipts/reversals, invoice sales, and manual adjustments.
+
+Open Settings and choose the workspace overselling policy: **Warn, but allow the sale**, **Block the sale**, or **Allow without warning**. The policy controls what happens when an invoice would take stock below zero. Jewellery invoice stock deductions use item net weights.
 
 ## 6. Invoices
 
@@ -41,11 +43,11 @@ Use the invoice detail/PDF actions to view or download the generated invoice. Th
 
 Create a supplier bill by selecting a supplier and date, adding purchased products, and entering quantities, unit costs, tax, and discounts. The bill total is calculated from the line items. Jewellery workspaces instead record pieces, gross/net weights, touch, wastage, fine weight, gold adjustments, and supplier gold balances, matching the jewellery invoice workflow; piece counts still update stock. Supplier bills can be searched, reviewed, edited, deleted, and downloaded as PDFs. For standard bills, record supplier payments from the **Payments** section with the date, amount, method, and optional reference. The remaining balance and payment status update from recorded amounts. Payments can be voided with a reason and remain in the history.
 
-Saving a bill increases stock quantities. Editing a bill adjusts stock by the difference in item quantities. Deleting a bill reverses the quantities, but is blocked if that would make stock negative. Bills do not automatically change the purchase price on the product record.
+Saving a bill increases stock. Editing a bill adjusts stock by the difference in item quantities or net weights. Deleting a bill reverses its stock movement, but is blocked if that would make stock negative. Bills do not automatically change the purchase price on the product record.
 
 ## 8. Jewellery vouchers
 
-Jewellery voucher entry is available only to workspaces whose administrator enabled jewellery mode. Select a party and date, add products, and enter the piece count and applicable weights, Touch, and wastage. Review the calculated fine weight and gold balance details before saving. Confirm the generated voucher carefully; weight calculations depend on the values entered.
+Jewellery voucher entry is available only to workspaces whose administrator enabled jewellery mode. Select a party and date, add products, and enter the piece count and applicable weights, Touch, and wastage. Stock is tracked using net grams, while piece count remains a voucher detail. For a customer with an earlier jewellery invoice, the opening gold balance carries forward from that customer's latest saved closing balance. Current invoice fine weight is added to opening gold to suggest closing gold; review and edit the closing value when needed before saving. Confirm the generated voucher carefully; weight calculations depend on the values entered.
 
 ## 9. Dashboard
 
@@ -53,7 +55,7 @@ The dashboard summarizes available business and invoice records, including reven
 
 ## 10. Settings and account security
 
-Open Settings to update personal details, business name, address, GSTIN, and password. Invoice template and jewellery access may be managed by an administrator. Keep business profile and invoice details accurate before generating customer-facing documents.
+Open Settings to update personal details, business name, address, GSTIN, overselling policy, and password. Invoice template and jewellery access may be managed by an administrator. Keep business profile and invoice details accurate before generating customer-facing documents.
 
 ## 11. Payment and stock history notes
 

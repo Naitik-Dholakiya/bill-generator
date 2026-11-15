@@ -12,6 +12,11 @@ class dashboardController extends Controller
     public function index(Request $request)
     {
         $userId = $request->cookie('GTA');
+        $isJewelryUser = (bool) DB::table('usermaster')
+            ->where('user_id', $userId)
+            ->value('is_jewelry');
+        $stockColumn = $isJewelryUser ? 'weight_in_stock' : 'quantity_in_stock';
+        $reorderColumn = $isJewelryUser ? 'reorder_weight_level' : 'reorder_level';
 
         $now         = Carbon::now();
         $monthStart  = $now->copy()->startOfMonth();
@@ -54,9 +59,9 @@ class dashboardController extends Controller
             ->leftJoin('inventorymaster as i', 'i.product_id', '=', 'p.product_id')
             ->where('p.created_by', $userId)
             ->whereNull('p.deleted_at')
-            ->where('p.reorder_level', '>', 0)
+            ->where("p.{$reorderColumn}", '>', 0)
             ->where('p.status', '1')
-            ->whereRaw('COALESCE(i.quantity_in_stock, 0) <= p.reorder_level')
+            ->whereRaw("COALESCE(i.{$stockColumn}, 0) <= p.{$reorderColumn}")
             ->count();
 
         $reorderWatch = DB::table('productmaster as p')
@@ -64,17 +69,17 @@ class dashboardController extends Controller
             ->leftJoin('suppliermaster as s', 'p.supplier_id', '=', 's.supplier_id')
             ->where('p.created_by', $userId)
             ->whereNull('p.deleted_at')
-            ->where('p.reorder_level', '>', 0)
+            ->where("p.{$reorderColumn}", '>', 0)
             ->where('p.status', '1')
-            ->whereRaw('COALESCE(i.quantity_in_stock, 0) <= p.reorder_level')
-            ->orderByRaw('COALESCE(i.quantity_in_stock, 0) ASC')
-            ->orderByDesc('p.reorder_level')
+            ->whereRaw("COALESCE(i.{$stockColumn}, 0) <= p.{$reorderColumn}")
+            ->orderByRaw("COALESCE(i.{$stockColumn}, 0) ASC")
+            ->orderByDesc("p.{$reorderColumn}")
             ->limit(6)
             ->get([
                 'p.product_name',
                 'p.product_code',
-                'p.reorder_level',
-                DB::raw('COALESCE(i.quantity_in_stock, 0) as quantity_in_stock'),
+                DB::raw("p.{$reorderColumn} as reorder_level"),
+                DB::raw("COALESCE(i.{$stockColumn}, 0) as quantity_in_stock"),
                 DB::raw("COALESCE(s.supplier_name, 'Unassigned') as supplier_name"),
             ]);
 
@@ -319,6 +324,7 @@ class dashboardController extends Controller
             'reorderWatch'      => $reorderWatch,
             'recentInvoices'    => $recentInvoices,
             'supplierSnapshot'  => $supplierSnapshot,
+            'isJewelryUser'     => $isJewelryUser,
         ]);
     }
 }

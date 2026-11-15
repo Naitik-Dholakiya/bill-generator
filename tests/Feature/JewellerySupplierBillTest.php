@@ -25,6 +25,7 @@ class JewellerySupplierBillTest extends TestCase
             $table->string('is_admin', 1)->default('N');
             $table->string('status', 1)->default('1');
             $table->boolean('is_jewelry')->default(false);
+            $table->string('stock_negative_policy')->default('warn_allow');
             $table->string('company_name')->nullable();
             $table->text('company_address')->nullable();
             $table->string('company_gstin')->nullable();
@@ -63,6 +64,7 @@ class JewellerySupplierBillTest extends TestCase
             $table->unsignedBigInteger('created_by')->nullable();
             $table->decimal('touch', 6, 3)->nullable();
             $table->decimal('default_wastage', 6, 3)->nullable();
+            $table->decimal('reorder_weight_level', 12, 3)->default(0);
             $table->timestamps();
             $table->softDeletes();
         });
@@ -114,6 +116,7 @@ class JewellerySupplierBillTest extends TestCase
             $table->bigIncrements('inventory_id');
             $table->unsignedBigInteger('product_id')->unique();
             $table->integer('quantity_in_stock')->default(0);
+            $table->decimal('weight_in_stock', 12, 3)->default(0);
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
@@ -136,6 +139,8 @@ class JewellerySupplierBillTest extends TestCase
             $table->unsignedBigInteger('reference_id')->nullable();
             $table->integer('quantity_delta');
             $table->integer('quantity_after');
+            $table->decimal('weight_delta', 12, 3)->nullable();
+            $table->decimal('weight_after', 12, 3)->nullable();
             $table->text('notes')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
@@ -211,7 +216,8 @@ class JewellerySupplierBillTest extends TestCase
         ]);
         $this->assertDatabaseHas('inventorymaster', [
             'product_id' => $productId,
-            'quantity_in_stock' => 2,
+            'quantity_in_stock' => 0,
+            'weight_in_stock' => 20,
         ]);
 
         $this->withCookie('GTA', (string) $userId)
@@ -250,23 +256,26 @@ class JewellerySupplierBillTest extends TestCase
         ]);
         $this->assertDatabaseHas('inventorymaster', [
             'product_id' => $productId,
-            'quantity_in_stock' => 3,
+            'quantity_in_stock' => 0,
+            'weight_in_stock' => 10,
         ]);
         $this->assertDatabaseHas('inventory_movements', [
             'product_id' => $productId,
             'reference_type' => 'supplier_bill',
             'reference_id' => $billId,
             'movement_type' => 'purchase_receipt',
-            'quantity_delta' => 2,
-            'quantity_after' => 2,
+            'quantity_delta' => 0,
+            'weight_delta' => 20,
+            'weight_after' => 20,
         ]);
         $this->assertDatabaseHas('inventory_movements', [
             'product_id' => $productId,
             'reference_type' => 'supplier_bill',
             'reference_id' => $billId,
             'movement_type' => 'purchase_adjustment',
-            'quantity_delta' => 1,
-            'quantity_after' => 3,
+            'quantity_delta' => 0,
+            'weight_delta' => -10,
+            'weight_after' => 10,
         ]);
 
         $this->withCookie('GTA', (string) $userId)

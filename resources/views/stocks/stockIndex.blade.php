@@ -12,7 +12,9 @@
             <main class="flex-1 overflow-y-auto p-6">
                 <div class="mb-6">
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Stock Management</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Review and update the available quantity for each product.</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        {{ $isJewelryUser ? 'Jewellery inventory is measured in net weight (grams).' : 'Review and update the available quantity for each product.' }}
+                    </p>
                 </div>
 
                 @if (session('success'))
@@ -24,6 +26,11 @@
                 @if (session('error'))
                     <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
                         {{ session('error') }}
+                    </div>
+                @endif
+                @if ($isJewelryUser)
+                    <div class="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+                        Jewellery stock is now tracked by net grams. Existing piece-count balances are not converted; enter a verified opening weight for each product.
                     </div>
                 @endif
 
@@ -43,15 +50,16 @@
                                 <tr>
                                     <th class="px-6 py-4 text-left text-sm font-semibold">Product</th>
                                     <th class="px-6 py-4 text-left text-sm font-semibold">Category</th>
-                                    <th class="px-6 py-4 text-left text-sm font-semibold">Available</th>
-                                    <th class="px-6 py-4 text-left text-sm font-semibold">Reorder Level</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold">{{ $isJewelryUser ? 'Available (g)' : 'Available' }}</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold">{{ $isJewelryUser ? 'Reorder Level (g)' : 'Reorder Level' }}</th>
                                     <th class="px-6 py-4 text-left text-sm font-semibold">Last Updated</th>
-                                    <th class="px-6 py-4 text-right text-sm font-semibold">Update Quantity</th>
+                                    <th class="px-6 py-4 text-right text-sm font-semibold">{{ $isJewelryUser ? 'Update grams' : 'Update quantity' }}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200 dark:divide-zinc-800">
                                 @forelse ($products as $product)
-                                    @php($quantity = $product->inventory?->quantity_in_stock ?? 0)
+                                    @php($quantity = $isJewelryUser ? (float) ($product->inventory?->weight_in_stock ?? 0) : (int) ($product->inventory?->quantity_in_stock ?? 0))
+                                    @php($reorderLevel = $isJewelryUser ? (float) $product->reorder_weight_level : (int) $product->reorder_level)
                                     <tr class="hover:bg-gray-50 dark:hover:bg-zinc-800/50">
                                         <td class="px-6 py-4">
                                             <span class="block font-medium text-gray-900 dark:text-white">{{ $product->product_name }}</span>
@@ -61,13 +69,13 @@
                                         <td class="px-6 py-4">{{ $product->category?->category_name ?? '-' }}</td>
                                         <td class="px-6 py-4">
                                             <span class="font-semibold {{ $quantity <= $product->reorder_level ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white' }}">
-                                                {{ number_format($quantity) }}
+                                                {{ number_format($quantity, $isJewelryUser ? 3 : 0) }}{{ $isJewelryUser ? ' g' : '' }}
                                             </span>
                                             @if ($quantity <= $product->reorder_level)
                                                 <span class="ml-2 text-xs font-medium text-amber-600 dark:text-amber-400">Reorder</span>
                                             @endif
                                         </td>
-                                        <td class="px-6 py-4">{{ number_format($product->reorder_level) }}</td>
+                                        <td class="px-6 py-4">{{ number_format($reorderLevel, $isJewelryUser ? 3 : 0) }}{{ $isJewelryUser ? ' g' : '' }}</td>
                                         <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                             {{ $product->inventory?->updated_at?->format('d M Y, h:i A') ?? 'Not recorded' }}
                                         </td>
@@ -78,12 +86,12 @@
                                                 @method('PUT')
                                                 <input type="hidden" name="_stock_product_id" value="{{ $product->product_id }}">
                                                 <div>
-                                                    <label class="sr-only" for="quantity-{{ $product->product_id }}">Quantity for {{ $product->product_name }}</label>
-                                                    <input id="quantity-{{ $product->product_id }}" type="number" name="quantity_in_stock"
-                                                        value="{{ old('_stock_product_id') == $product->product_id ? old('quantity_in_stock', $quantity) : $quantity }}" min="0" max="2147483647" required
+                                                    <label class="sr-only" for="quantity-{{ $product->product_id }}">{{ $isJewelryUser ? 'Net weight in grams' : 'Quantity' }} for {{ $product->product_name }}</label>
+                                                    <input id="quantity-{{ $product->product_id }}" type="number" name="{{ $isJewelryUser ? 'weight_in_stock' : 'quantity_in_stock' }}"
+                                                        value="{{ old('_stock_product_id') == $product->product_id ? old($isJewelryUser ? 'weight_in_stock' : 'quantity_in_stock', $quantity) : $quantity }}" min="0" max="{{ $isJewelryUser ? '999999999.999' : '2147483647' }}" step="{{ $isJewelryUser ? '0.001' : '1' }}" required
                                                         class="w-28 rounded-lg border border-gray-200 bg-white px-3 py-2 text-right dark:border-zinc-700 dark:bg-zinc-800">
-                                                    @if ($errors->has('quantity_in_stock') && old('_stock_product_id') == $product->product_id)
-                                                        <p class="mt-1 text-xs text-red-600">{{ $errors->first('quantity_in_stock') }}</p>
+                                                    @if ($errors->has($isJewelryUser ? 'weight_in_stock' : 'quantity_in_stock') && old('_stock_product_id') == $product->product_id)
+                                                        <p class="mt-1 text-xs text-red-600">{{ $errors->first($isJewelryUser ? 'weight_in_stock' : 'quantity_in_stock') }}</p>
                                                     @endif
                                                 </div>
                                                 <button type="submit" class="rounded-lg bg-cyan-600 px-3 py-2 text-sm font-medium text-white hover:bg-cyan-700">

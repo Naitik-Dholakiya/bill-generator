@@ -31,6 +31,12 @@
 
                 @csrf
                 @method('PUT')
+                @if ($errors->any())
+                    <div role="alert" class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+                        <p class="font-semibold">Please correct the following:</p>
+                        <ul class="mt-1 list-inside list-disc">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+                    </div>
+                @endif
 
                 <div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
 
@@ -235,12 +241,13 @@
                             <div>
 
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Reorder Level
+                                    Reorder Level{{ $isJewelryUser ? ' (g)' : '' }}
                                 </label>
 
                                 <input type="number"
-                                    name="tb_reorder_level"
-                                    value="{{ old('tb_reorder_level',$product->reorder_level) }}"
+                                    name="{{ $isJewelryUser ? 'tb_reorder_weight_level' : 'tb_reorder_level' }}"
+                                    min="0" max="{{ $isJewelryUser ? '999999999.999' : '2147483647' }}" step="{{ $isJewelryUser ? '0.001' : '1' }}" required
+                                    value="{{ old($isJewelryUser ? 'tb_reorder_weight_level' : 'tb_reorder_level', $isJewelryUser ? $product->reorder_weight_level : $product->reorder_level) }}"
                                     class="w-full px-4 py-3 rounded-xl
                                     bg-white dark:bg-zinc-800
                                     border border-gray-200 dark:border-zinc-700

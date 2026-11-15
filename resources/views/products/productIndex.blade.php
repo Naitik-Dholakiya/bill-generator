@@ -103,7 +103,7 @@
                                     @endif
 
                                     <th class="px-6 py-4 text-left text-sm font-semibold">
-                                        Reorder Level
+                                        Reorder Level{{ $isJewelryUser ? ' (g)' : '' }}
                                     </th>
 
                                     <th class="px-6 py-4 text-center text-sm font-semibold">
@@ -117,6 +117,7 @@
                             <tbody class="divide-y divide-gray-200 dark:divide-zinc-800">
 
                                 @forelse($products as $product)
+                                    @php($reorderLevel = $isJewelryUser ? (float) $product->reorder_weight_level : (int) $product->reorder_level)
                                     <tr class="hover:bg-gray-50 dark:hover:bg-zinc-800/50">
 
                                         <td class="px-6 py-4">
@@ -168,22 +169,7 @@
                                         @endif
 
                                         <td class="px-6 py-4">
-                                            @if ($product->reorder_level == 0)
-                                                <span
-                                                    class="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-                                                    Out of Stock ({{ $product->reorder_level }})
-                                                </span>
-                                            @elseif($product->reorder_level <= 10)
-                                                <span
-                                                    class="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
-                                                    Low Stock ({{ $product->reorder_level }})
-                                                </span>
-                                            @else
-                                                <span
-                                                    class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                                                    In Stock ({{ $product->reorder_level }})
-                                                </span>
-                                            @endif
+                                            {{ number_format($reorderLevel, $isJewelryUser ? 3 : 0) }}{{ $isJewelryUser ? ' g' : '' }}
                                         </td>
 
                                         <td class="px-6 py-4">

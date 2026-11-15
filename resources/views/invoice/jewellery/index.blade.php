@@ -7,6 +7,9 @@
         @include('layout.sidebar')
         <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
             @include('layout.navbar', ['title' => 'Jewellery Vouchers'])
+            @if (session('warning'))
+                <div role="status" class="mx-6 mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">{{ session('warning') }}</div>
+            @endif
             <main class="flex-1 overflow-y-auto p-6">
                 <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>

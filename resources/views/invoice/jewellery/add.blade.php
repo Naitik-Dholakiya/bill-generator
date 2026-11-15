@@ -47,12 +47,14 @@
                             <select name="customer_id" required class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">
                                 <option value="">Select customer</option>
                                 @foreach ($customers as $customer)
-                                    <option value="{{ $customer->customer_id }}" @selected(old('customer_id', $invoice->customer_id ?? '') == $customer->customer_id)>{{ $customer->customer_name }}</option>
+                                    <option value="{{ $customer->customer_id }}" data-gold-balance="{{ isset($goldBalances[$customer->customer_id]) ? number_format($goldBalances[$customer->customer_id], 3, '.', '') : '' }}" @selected(old('customer_id', $invoice->customer_id ?? '') == $customer->customer_id)>{{ $customer->customer_name }}</option>
                                 @endforeach
                             </select>
+                            @error('customer_id')<span class="mt-1 block text-sm text-red-600">{{ $message }}</span>@enderror
                         </label>
                         <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Date <span class="text-red-500">*</span>
                             <input type="date" name="invoice_date" required value="{{ old('invoice_date', isset($invoice) ? \Carbon\Carbon::parse($invoice->invoice_date)->format('Y-m-d') : date('Y-m-d')) }}" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">
+                            @error('invoice_date')<span class="mt-1 block text-sm text-red-600">{{ $message }}</span>@enderror
                         </label>
                         <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Voucher section
                             <input name="voucher_section" maxlength="50" required value="{{ old('voucher_section', $invoice->voucher_section ?? 'SALES') }}" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 uppercase dark:border-zinc-700 dark:bg-zinc-800">
@@ -115,10 +117,13 @@
                         <h2 class="mb-5 font-semibold text-gray-900 dark:text-white">Party gold balance</h2>
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <label class="text-sm text-gray-600 dark:text-gray-300">Opening gold (g) · Credit
-                                <input type="number" name="opening_gold" min="0" step="0.001" value="{{ old('opening_gold', $invoice->opening_gold ?? '') }}" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-800">
+                                <input id="openingGold" type="number" name="opening_gold" min="0" max="9999999.999" step="0.001" value="{{ old('opening_gold', isset($invoice) ? $invoice->opening_gold : ($goldBalances[old('customer_id')] ?? '')) }}" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-800">
+                                @error('opening_gold')<span class="mt-1 block text-sm text-red-600">{{ $message }}</span>@enderror
                             </label>
                             <label class="text-sm text-gray-600 dark:text-gray-300">Closing gold (g) · Debit
-                                <input type="number" name="closing_gold" min="0" step="0.001" value="{{ old('closing_gold', $invoice->closing_gold ?? '') }}" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-800">
+                                <input id="closingGold" type="number" name="closing_gold" min="0" max="9999999.999" step="0.001" value="{{ old('closing_gold', $invoice->closing_gold ?? '') }}" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-800">
+                                <span class="mt-1 block text-xs text-gray-500">Suggested as opening gold plus this voucher’s fine weight; you can adjust it.</span>
+                                @error('closing_gold')<span class="mt-1 block text-sm text-red-600">{{ $message }}</span>@enderror
                             </label>
                         </div>
 
@@ -155,6 +160,8 @@
             totalFine += numericValue(row.querySelector('.fine-weight').value);
         });
         document.getElementById('jewelleryFineTotal').textContent = totalFine.toFixed(3) + ' g';
+        const openingGold = numericValue(document.getElementById('openingGold').value);
+        document.getElementById('closingGold').value = (openingGold + totalFine).toFixed(3);
     }
 
     itemBody.addEventListener('input', event => {
@@ -170,6 +177,19 @@
         }
     });
     document.querySelectorAll('.voucher-number').forEach(input => input.addEventListener('input', calculateJewelleryTotals));
+    document.getElementById('openingGold').addEventListener('input', calculateJewelleryTotals);
+    document.querySelector('[name="customer_id"]').addEventListener('change', event => {
+        const option = event.target.selectedOptions[0];
+        const openingGold = document.getElementById('openingGold');
+        openingGold.value = option.dataset.goldBalance || '0.000';
+        openingGold.readOnly = option.dataset.goldBalance !== '';
+        calculateJewelleryTotals();
+    });
+    const selectedCustomer = document.querySelector('[name="customer_id"]').selectedOptions[0];
+    if (selectedCustomer?.dataset.goldBalance) {
+        document.getElementById('openingGold').value = selectedCustomer.dataset.goldBalance;
+        document.getElementById('openingGold').readOnly = true;
+    }
 
     document.getElementById('addJewelleryItem').addEventListener('click', () => {
         const template = document.getElementById('jewelleryItemTemplate');

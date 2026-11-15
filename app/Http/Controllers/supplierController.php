@@ -6,6 +6,7 @@ use App\Models\SupplierMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class supplierController extends Controller
 {
@@ -57,14 +58,15 @@ class supplierController extends Controller
 
     public function createSupplierPost(Request $request)
     {
+        $userId = (int) $request->attributes->get('authenticated_user_id');
         $validatedData = $request->validate([
-            'lf_supplier_code' => 'required|unique:suppliermaster,supplier_code|max:20',
-            'tb_supplierName' => 'required|max:100',
-            'tb_email' => 'nullable|email|max:100|unique:suppliermaster,email',
-            'tb_phone' => 'required|max:20',
-            'tb_contactPerson' => 'nullable|max:100',
-            'tb_gstNumber' => 'nullable|max:15|unique:suppliermaster,gst_number',
-            'tb_supplierAddress' => 'nullable',
+            'lf_supplier_code' => ['required', 'string', 'max:20', Rule::unique('suppliermaster', 'supplier_code')],
+            'tb_supplierName' => ['required', 'string', 'max:100'],
+            'tb_email' => ['nullable', 'email', 'max:100', Rule::unique('suppliermaster', 'email')],
+            'tb_phone' => ['required', 'string', 'max:20'],
+            'tb_contactPerson' => ['nullable', 'string', 'max:100'],
+            'tb_gstNumber' => ['nullable', 'string', 'max:15', 'regex:/^[0-9A-Z]{15}$/i', Rule::unique('suppliermaster', 'gst_number')],
+            'tb_supplierAddress' => ['nullable', 'string', 'max:2000'],
         ], [
             'tb_supplierName.required' => 'Supplier name is required.',
             'tb_phone.required' => 'Phone number is required.',
@@ -82,7 +84,6 @@ class supplierController extends Controller
         ]);
 
         try {
-            $userId = request()->cookies->get('GTA');
             DB::transaction(function () use ($validatedData, $userId) {
                 SupplierMaster::create([
                     'supplier_code' => $validatedData['lf_supplier_code'],
@@ -123,12 +124,12 @@ class supplierController extends Controller
     {
         $supplier = SupplierMaster::findOrFail($id);
         $validatedData = $request->validate([
-            'tb_supplierName' => 'required|max:100',
-            'tb_email' => 'nullable|email|max:100|unique:suppliermaster,email,'.$supplier->supplier_id.',supplier_id',
-            'tb_phone' => 'required|max:20',
-            'tb_contactPerson' => 'nullable|max:100',
-            'tb_gstNumber' => 'nullable|max:15|unique:suppliermaster,gst_number,'.$supplier->supplier_id.',supplier_id',
-            'tb_supplierAddress' => 'nullable',
+            'tb_supplierName' => ['required', 'string', 'max:100'],
+            'tb_email' => ['nullable', 'email', 'max:100', Rule::unique('suppliermaster', 'email')->ignore($supplier->supplier_id, 'supplier_id')],
+            'tb_phone' => ['required', 'string', 'max:20'],
+            'tb_contactPerson' => ['nullable', 'string', 'max:100'],
+            'tb_gstNumber' => ['nullable', 'string', 'max:15', 'regex:/^[0-9A-Z]{15}$/i', Rule::unique('suppliermaster', 'gst_number')->ignore($supplier->supplier_id, 'supplier_id')],
+            'tb_supplierAddress' => ['nullable', 'string', 'max:2000'],
         ], [
             'tb_supplierName.required' => 'Supplier name is required.',
             'tb_phone.required' => 'Phone number is required.',
@@ -145,7 +146,7 @@ class supplierController extends Controller
         ]);
 
         try {
-            $userId = request()->cookies->get('GTA');
+            $userId = (int) $request->attributes->get('authenticated_user_id');
             DB::transaction(function () use ($supplier, $validatedData, $userId) {
                 $supplier->update([
                     'supplier_name' => $validatedData['tb_supplierName'],

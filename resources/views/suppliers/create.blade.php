@@ -20,6 +20,12 @@
 
                 <form action="{{ route('createSupplierPost') }}" method="POST">
                     @csrf
+                    @if ($errors->any())
+                        <div role="alert" class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+                            <p class="font-semibold">Please correct the following:</p>
+                            <ul class="mt-1 list-inside list-disc">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+                        </div>
+                    @endif
 
                     <div
                         class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">

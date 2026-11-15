@@ -482,7 +482,10 @@
                                     <p class="text-sm truncate">{{ $r->product_name }}</p>
                                     <p class="text-xs text-gray-400 mt-0.5">{{ $r->product_code }} · supplier: {{ $r->supplier_name }}</p>
                                 </div>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ number_format($r->quantity_in_stock) }} / {{ number_format($r->reorder_level) }} in stock</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                                    {{ number_format($r->quantity_in_stock, $isJewelryUser ? 3 : 0) }}{{ $isJewelryUser ? ' g' : '' }}
+                                    / {{ number_format($r->reorder_level, $isJewelryUser ? 3 : 0) }}{{ $isJewelryUser ? ' g' : '' }} in stock
+                                </p>
                             </div>
                         @empty
                             <div class="px-5 py-8 text-center">

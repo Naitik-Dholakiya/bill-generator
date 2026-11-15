@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -93,7 +94,10 @@ class AuthController extends Controller
             return redirect()->intended(route($user->is_admin === 'Y' ? 'admin.dashboard' : 'dashboard'))
                 ->with('success', 'Login successful.');
 
-        } catch (\Exception $e) {
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            report($e);
 
             return back()
                 ->withErrors([

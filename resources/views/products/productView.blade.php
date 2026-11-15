@@ -147,7 +147,7 @@
                         Status
                     </p>
 
-                    @if($product->status)
+                    @if((string) $product->status === '1')
                         <span class="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400 text-sm font-semibold mt-2">
                             Active
                         </span>
@@ -230,11 +230,11 @@
 
                         <div>
                             <p class="text-sm text-gray-500 dark:text-gray-400">
-                                Reorder Level
+                                Reorder Level{{ $isJewelryUser ? ' (g)' : '' }}
                             </p>
 
                             <p class="font-medium text-gray-900 dark:text-white">
-                                {{ $product->reorder_level }}
+                                {{ number_format($isJewelryUser ? (float) $product->reorder_weight_level : (int) $product->reorder_level, $isJewelryUser ? 3 : 0) }}{{ $isJewelryUser ? ' g' : '' }}
                             </p>
 
                         </div>

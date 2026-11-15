@@ -29,6 +29,7 @@ class AdminUserCreationTest extends TestCase
             $table->string('is_admin', 1)->default('N');
             $table->string('status', 1)->default('1');
             $table->boolean('is_jewelry')->default(false);
+            $table->string('stock_negative_policy')->default('warn_allow');
             $table->string('invoice_template')->nullable();
             $table->timestamps();
         });

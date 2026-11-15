@@ -216,7 +216,7 @@
     <div class="flex flex-col-reverse gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <p class="text-sm text-gray-500 dark:text-gray-400">
             @if ($isJewelryUser)
-                Piece count updates stock. Fine weight is saved with each jewellery item.
+                Net weight in grams updates stock. Piece counts remain on the voucher for reference.
             @else
                 Saving this bill adds the purchased quantities to stock.
             @endif

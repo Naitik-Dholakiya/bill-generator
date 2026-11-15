@@ -61,7 +61,8 @@ The application is designed for small and medium businesses to:
 - add, edit, and delete products
 - assign suppliers and categories
 - product code, HSN-style catalog structure, price, and stock tracking
-- reorder-level monitoring for low-stock warnings
+- quantity-based stock and reorder levels for standard workspaces
+- net-weight stock in grams and gram-based reorder levels for jewellery workspaces
 - category creation from the product workflow
 
 ### Invoice Management
@@ -98,13 +99,21 @@ The application is designed for small and medium businesses to:
 - tax calculations and totals
 - INR currency formatting
 - customer billing and invoice details tailored for Indian operations
-- support for jewelry-specific invoice workflows
+- jewellery vouchers with net-weight stock and customer gold-balance carry-forward
+
+### Inventory and Jewellery Workflows
+
+- workspace-configurable overselling behavior: warn and allow, block, or allow without warning
+- stock movement history for invoice sales, supplier bills, reversals, and manual adjustments
+- jewellery stock uses net grams; piece counts remain voucher details and are not treated as stock units
+- per-customer gold opening and closing balances on jewellery invoices; closing gold defaults to opening gold plus current fine weight and can be edited before saving
 
 ### Settings and Personalization
 
 - user profile and company settings update
 - password change flow
 - company name, address, and GST configuration
+- invoice overselling policy configuration
 - invoice template configuration per user
 
 ---

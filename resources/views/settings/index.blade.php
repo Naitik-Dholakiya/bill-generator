@@ -207,6 +207,31 @@
                             </div>
                         </section>
 
+                        <section aria-labelledby="stock-policy-heading" class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                            <div class="border-b border-slate-100 px-5 py-5 dark:border-zinc-800 sm:px-7">
+                                <h2 id="stock-policy-heading" class="font-semibold text-slate-900 dark:text-white">
+                                    Stock behavior
+                                </h2>
+                                <p class="mt-1 text-sm text-slate-500 dark:text-zinc-400">
+                                    Choose what happens when an invoice sale exceeds available stock. Jewellery stock is tracked in net grams.
+                                </p>
+                            </div>
+                            <div class="p-5 sm:p-7">
+                                <label for="stock_negative_policy" class="mb-2 block text-sm font-medium text-slate-700 dark:text-zinc-300">
+                                    Overselling policy
+                                </label>
+                                <select id="stock_negative_policy" name="stock_negative_policy" required
+                                    class="w-full max-w-xl rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-500/10 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white @error('stock_negative_policy') border-red-500 dark:border-red-500 @enderror">
+                                    <option value="warn_allow" @selected(old('stock_negative_policy', $setting->stock_negative_policy ?? 'warn_allow') === 'warn_allow')>Warn, but allow the sale</option>
+                                    <option value="block" @selected(old('stock_negative_policy', $setting->stock_negative_policy ?? 'warn_allow') === 'block')>Block the sale</option>
+                                    <option value="allow" @selected(old('stock_negative_policy', $setting->stock_negative_policy ?? 'warn_allow') === 'allow')>Allow without warning</option>
+                                </select>
+                                @error('stock_negative_policy')
+                                    <p class="mt-1.5 text-xs font-medium text-red-600 dark:text-red-400">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </section>
+
                         <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <p class="text-xs text-slate-400 dark:text-zinc-500">
                                 Your information is only used to manage your billing account.
@@ -280,17 +305,19 @@
                         <label for="tb_password" class="mb-2 block text-sm font-medium text-slate-700 dark:text-zinc-300">
                             New password
                         </label>
-                        <input id="tb_password" type="password" name="tb_password" required minlength="6"
+                        <input id="tb_password" type="password" name="tb_password" required minlength="8"
                             autocomplete="new-password"
                             class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-500/10 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white">
+                        @error('tb_password')<p class="mt-1 text-xs font-medium text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                     </div>
                     <div>
                         <label for="tb_password_confirmation" class="mb-2 block text-sm font-medium text-slate-700 dark:text-zinc-300">
                             Confirm new password
                         </label>
-                        <input id="tb_password_confirmation" type="password" name="tb_password_confirmation" required minlength="6"
+                        <input id="tb_password_confirmation" type="password" name="tb_password_confirmation" required minlength="8"
                             autocomplete="new-password"
                             class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-500/10 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white">
+                        @error('tb_password_confirmation')<p class="mt-1 text-xs font-medium text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                     </div>
                 </div>
                 <div class="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50/70 p-5 dark:border-zinc-800 dark:bg-zinc-950/40 sm:flex-row sm:justify-end">
@@ -329,5 +356,8 @@
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') closeModal('changePasswordModal');
         });
+        @if ($errors->has('tb_password') || $errors->has('tb_password_confirmation'))
+            openModal('changePasswordModal');
+        @endif
     </script>
 @endsection

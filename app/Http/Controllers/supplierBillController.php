@@ -95,7 +95,7 @@ class supplierBillController extends Controller
             ]);
 
             $this->replaceItems($billId, $validated['items'], $userId, $now, $isJewelryUser);
-            $this->adjustStock($this->quantitiesByProduct($validated['items']), $userId, 'purchase_receipt', $billId);
+            $this->adjustStock($this->quantitiesByProduct($validated['items'], $isJewelryUser), $userId, 'purchase_receipt', $billId, $isJewelryUser);
         });
 
         return redirect()
@@ -183,8 +183,8 @@ class supplierBillController extends Controller
         );
 
         DB::transaction(function () use ($validated, $billId, $userId, $oldItems, $isJewelryUser, $bill) {
-            $oldQuantities = $this->quantitiesByProduct($oldItems->all());
-            $newQuantities = $this->quantitiesByProduct($validated['items']);
+            $oldQuantities = $this->quantitiesByProduct($oldItems->all(), $isJewelryUser);
+            $newQuantities = $this->quantitiesByProduct($validated['items'], $isJewelryUser);
             $stockDeltas = [];
 
             foreach (array_unique(array_merge(array_keys($oldQuantities), array_keys($newQuantities))) as $productId) {
@@ -234,7 +234,7 @@ class supplierBillController extends Controller
                 ->update(['deleted_at' => $now, 'updated_at' => $now]);
 
             $this->replaceItems($billId, $validated['items'], $userId, $now, $isJewelryUser);
-            $this->adjustStock($stockDeltas, $userId, 'purchase_adjustment', $billId);
+            $this->adjustStock($stockDeltas, $userId, 'purchase_adjustment', $billId, $isJewelryUser);
         });
 
         return redirect()
@@ -245,13 +245,14 @@ class supplierBillController extends Controller
     public function destroy(Request $request, int $billId)
     {
         $userId = $request->attributes->get('authenticated_user_id');
+        $isJewelryUser = $this->isJewelryUser($userId);
         $this->findBill($billId, $userId);
 
-        DB::transaction(function () use ($billId, $userId) {
+        DB::transaction(function () use ($billId, $userId, $isJewelryUser) {
             $items = $this->billItems($billId);
-            $quantities = $this->quantitiesByProduct($items->all());
+            $quantities = $this->quantitiesByProduct($items->all(), $isJewelryUser);
             $reversal = array_map(fn ($quantity) => -$quantity, $quantities);
-            $this->adjustStock($reversal, $userId, 'purchase_reversal', $billId);
+            $this->adjustStock($reversal, $userId, 'purchase_reversal', $billId, $isJewelryUser);
 
             $now = now();
             DB::table('purchasemaster')
@@ -327,7 +328,7 @@ class supplierBillController extends Controller
                 'footer_note' => ['nullable', 'string', 'max:500'],
                 'items.*.pcs' => ['required', 'integer', 'min:1', 'max:2147483647'],
                 'items.*.gross_weight' => ['nullable', 'numeric', 'decimal:0,3', 'min:0', 'max:9999999.999'],
-                'items.*.net_weight' => ['nullable', 'numeric', 'decimal:0,3', 'min:0', 'max:9999999.999'],
+                'items.*.net_weight' => ['required', 'numeric', 'decimal:0,3', 'gt:0', 'max:9999999.999'],
                 'items.*.touch' => ['nullable', 'numeric', 'between:0,100', 'decimal:0,3'],
                 'items.*.wastage' => ['nullable', 'numeric', 'between:0,100', 'decimal:0,3'],
             ];
@@ -343,7 +344,24 @@ class supplierBillController extends Controller
             }
         }
 
-        return $request->validate($rules);
+        $validated = $request->validate($rules);
+
+        if ($isJewelryUser) {
+            foreach ($validated['items'] as $index => $item) {
+                if (isset($item['gross_weight']) && (float) $item['gross_weight'] < (float) $item['net_weight']) {
+                    throw ValidationException::withMessages([
+                        "items.{$index}.gross_weight" => 'Gross weight must be at least the net weight.',
+                    ]);
+                }
+                if ((float) ($item['touch'] ?? 0) + (float) ($item['wastage'] ?? 0) > 100) {
+                    throw ValidationException::withMessages([
+                        "items.{$index}.wastage" => 'Touch plus wastage cannot exceed 100%.',
+                    ]);
+                }
+            }
+        }
+
+        return $validated;
     }
 
     private function calculateTotals(array $items, bool $isJewelryUser = false): array
@@ -442,34 +460,46 @@ class supplierBillController extends Controller
         }
     }
 
-    private function quantitiesByProduct(array $items): array
+    private function quantitiesByProduct(array $items, bool $isJewelryUser = false): array
     {
         $quantities = [];
         foreach ($items as $item) {
             $productId = (int) (is_array($item) ? $item['product_id'] : $item->product_id);
-            $quantity = (int) (is_array($item) ? ($item['quantity'] ?? $item['pcs']) : ($item->quantity ?? $item->pcs));
+            $quantity = $isJewelryUser
+                ? (float) (is_array($item) ? ($item['net_weight'] ?? 0) : ($item->net_weight ?? 0))
+                : (int) (is_array($item) ? ($item['quantity'] ?? $item['pcs']) : ($item->quantity ?? $item->pcs));
             $quantities[$productId] = ($quantities[$productId] ?? 0) + $quantity;
         }
 
         return $quantities;
     }
 
-    private function adjustStock(array $deltas, int $userId, string $movementType, int $billId): void
+    private function adjustStock(array $deltas, int $userId, string $movementType, int $billId, bool $isJewelryUser = false): void
     {
         foreach ($deltas as $productId => $delta) {
             try {
-                app(InventoryLedger::class)->applyMovement(
-                    (int) $productId,
-                    (int) $delta,
-                    $userId,
-                    $movementType,
-                    'supplier_bill',
-                    $billId,
-                    null
-                );
+                if ($isJewelryUser) {
+                    app(InventoryLedger::class)->applyWeightMovement(
+                        (int) $productId,
+                        (float) $delta,
+                        $userId,
+                        $movementType,
+                        'supplier_bill',
+                        $billId
+                    );
+                } else {
+                    app(InventoryLedger::class)->applyMovement(
+                        (int) $productId,
+                        (int) $delta,
+                        $userId,
+                        $movementType,
+                        'supplier_bill',
+                        $billId
+                    );
+                }
             } catch (ValidationException $exception) {
                 throw ValidationException::withMessages([
-                    'stock' => 'This change would put the stock quantity outside its supported range. Update the stock quantity before editing or deleting this bill.',
+                    'stock' => 'This change would put stock below zero or outside its supported range. Update stock before editing or deleting this bill.',
                 ]);
             }
         }

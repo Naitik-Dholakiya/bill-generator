@@ -44,6 +44,7 @@ class InvoiceLedgerAndPaymentsTest extends TestCase
             $table->string('status', 1)->default('1');
             $table->boolean('is_jewelry')->default(false);
             $table->string('invoice_template')->default('pdf');
+            $table->string('stock_negative_policy')->default('warn_allow');
             $table->timestamps();
         });
         Schema::create('customermaster', function (Blueprint $table): void {
@@ -85,6 +86,7 @@ class InvoiceLedgerAndPaymentsTest extends TestCase
             $table->decimal('purchase_price', 10, 2)->default(0);
             $table->decimal('selling_price', 10, 2)->default(0);
             $table->integer('reorder_level')->default(0);
+            $table->decimal('reorder_weight_level', 12, 3)->default(0);
             $table->string('status', 1)->default('1');
             $table->unsignedBigInteger('created_by');
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -97,6 +99,7 @@ class InvoiceLedgerAndPaymentsTest extends TestCase
             $table->bigIncrements('inventory_id');
             $table->unsignedBigInteger('product_id')->unique();
             $table->integer('quantity_in_stock')->default(0);
+            $table->decimal('weight_in_stock', 12, 3)->default(0);
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
@@ -182,6 +185,8 @@ class InvoiceLedgerAndPaymentsTest extends TestCase
             $table->unsignedBigInteger('reference_id')->nullable();
             $table->integer('quantity_delta');
             $table->integer('quantity_after');
+            $table->decimal('weight_delta', 12, 3)->nullable();
+            $table->decimal('weight_after', 12, 3)->nullable();
             $table->text('notes')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
@@ -458,6 +463,79 @@ class InvoiceLedgerAndPaymentsTest extends TestCase
             'opening_paid_amount' => 40,
             'payment_status' => 'partial',
         ]);
+    }
+
+    public function test_jewellery_stock_uses_net_grams_and_invoice_gold_carries_forward_per_customer(): void
+    {
+        [$userId, $customerId, $productId] = $this->createWorkspace();
+        DB::table('usermaster')->where('user_id', $userId)->update([
+            'is_jewelry' => true,
+            'stock_negative_policy' => 'block',
+        ]);
+        DB::table('inventorymaster')->where('product_id', $productId)->update([
+            'weight_in_stock' => 10,
+        ]);
+
+        $voucherData = [
+            'invoice_number' => 'IGNORED',
+            'customer_id' => $customerId,
+            'invoice_date' => now()->toDateString(),
+            'voucher_section' => 'SALES',
+            'opening_gold' => '15.000',
+            'items' => [[
+                'product_id' => $productId,
+                'pcs' => 40,
+                'gross_weight' => '2.100',
+                'net_weight' => '2.000',
+                'touch' => '95.000',
+                'wastage' => '2.500',
+            ]],
+        ];
+
+        $this->withCookie('GTA', (string) $userId)
+            ->post(route('invoice.createInvoicePost'), $voucherData)
+            ->assertRedirect(route('invoice.index'));
+
+        $firstInvoiceId = (int) DB::table('invoicemaster')->value('invoice_id');
+        $this->assertDatabaseHas('invoicemaster', [
+            'invoice_id' => $firstInvoiceId,
+            'opening_gold' => 15,
+            'closing_gold' => 16.95,
+        ]);
+        $this->assertDatabaseHas('inventorymaster', [
+            'product_id' => $productId,
+            'quantity_in_stock' => 5,
+            'weight_in_stock' => 8,
+        ]);
+
+        $this->withCookie('GTA', (string) $userId)
+            ->get(route('invoice.create'))
+            ->assertOk()
+            ->assertSee('data-gold-balance="16.950"', false);
+
+        $voucherData['opening_gold'] = '0.000';
+        $voucherData['items'][0]['net_weight'] = '1.000';
+        $voucherData['items'][0]['gross_weight'] = '1.100';
+        $voucherData['items'][0]['wastage'] = '0.000';
+        $voucherData['closing_gold'] = '21.000';
+        $this->withCookie('GTA', (string) $userId)
+            ->post(route('invoice.createInvoicePost'), $voucherData)
+            ->assertRedirect(route('invoice.index'));
+
+        $this->assertDatabaseHas('invoicemaster', [
+            'invoice_id' => $firstInvoiceId + 1,
+            'opening_gold' => 16.95,
+            'closing_gold' => 21,
+        ]);
+
+        $voucherData['items'][0]['net_weight'] = '100.000';
+        $voucherData['items'][0]['gross_weight'] = '100.100';
+        $this->withCookie('GTA', (string) $userId)
+            ->from(route('invoice.create'))
+            ->post(route('invoice.createInvoicePost'), $voucherData)
+            ->assertSessionHasErrors('stock');
+
+        $this->assertSame(2, DB::table('invoicemaster')->count());
     }
 
     private function createWorkspace(): array

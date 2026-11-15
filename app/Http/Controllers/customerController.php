@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 
 class customerController extends Controller
 {
@@ -47,38 +47,20 @@ class customerController extends Controller
 
     public function createCustomerPost(Request $request)
     {
+        $userId = (int) $request->attributes->get('authenticated_user_id');
+        $validatedData = $request->validate([
+            'customer_code' => ['required', 'string', 'max:20', Rule::unique('customermaster', 'customer_code')],
+            'customer_name' => ['required', 'string', 'max:100'],
+            'email' => ['nullable', 'email', 'max:100', Rule::unique('customermaster', 'email')],
+            'phone' => ['required', 'string', 'max:20'],
+            'gst_number' => ['nullable', 'string', 'max:15', 'regex:/^[0-9A-Z]{15}$/i', Rule::unique('customermaster', 'gst_number')],
+            'billing_address' => ['nullable', 'string', 'max:2000'],
+            'shipping_address' => ['nullable', 'string', 'max:2000'],
+        ]);
+
         try {
-
-            $validatedData = $request->validate([
-                'customer_code' => 'required|unique:customermaster,customer_code|max:20',
-                'customer_name' => 'required|max:100',
-                'email' => 'nullable|email|max:100|unique:customermaster,email',
-                'phone' => 'required|max:20',
-                'gst_number' => 'nullable|max:15|unique:customermaster,gst_number',
-                'billing_address' => 'nullable',
-                'shipping_address' => 'nullable',
-            ], [
-                'customer_name.required' => 'Customer name is required.',
-                'customer_name.max' => 'Customer name must not exceed 100 characters.',
-                'email.email' => 'Please enter a valid email address.',
-                'email.unique' => 'Email already exists.',
-                'phone.required' => 'Phone number is required.',
-                'gst_number.unique' => 'GST Number already exists.',
-            ], [
-                'customer_code' => 'Customer Code',
-                'customer_name' => 'Customer Name',
-                'email' => 'Email',
-                'phone' => 'Phone',
-                'gst_number' => 'GST Number',
-                'billing_address' => 'Billing Address',
-                'shipping_address' => 'Shipping Address',
-            ]);
-
-            DB::beginTransaction();
-
-            $userId = $request->cookie('GTA');
-
-            Customer::create([
+            DB::transaction(function () use ($validatedData, $userId): void {
+                Customer::create([
                 'customer_code' => $validatedData['customer_code'],
                 'customer_name' => $validatedData['customer_name'],
                 'email' => $validatedData['email'] ?? null,
@@ -87,30 +69,19 @@ class customerController extends Controller
                 'billing_address' => $validatedData['billing_address'] ?? null,
                 'shipping_address' => $validatedData['shipping_address'] ?? null,
                 'created_by' => $userId,
-                'created_on' => now(),
-                'active_status' => 1,
-            ]);
-
-            DB::commit();
+                'status' => '1',
+                ]);
+            });
 
             return redirect()
                 ->route('customers.index')
                 ->with('success', 'Customer created successfully.');
-
-        // } catch (ValidationException $e) {
-
-        //     return redirect()
-        //         ->back()
-        //         ->withErrors($e->validator)
-        //         ->withInput();
-
-        } catch (\Exception $e) {
-
-            DB::rollBack();
+        } catch (\Throwable $e) {
+            report($e);
 
             return redirect()
                 ->back()
-                ->with('error', $e->getMessage())
+                ->with('error', 'Unable to save the customer. Please try again.')
                 ->withInput();
         }
     }
@@ -131,38 +102,20 @@ class customerController extends Controller
 
     public function editCustomerPost($id, Request $request)
     {
+        $customer = Customer::findOrFail($id);
+        $validatedData = $request->validate([
+            'customer_name' => ['required', 'string', 'max:100'],
+            'email' => ['nullable', 'email', 'max:100', Rule::unique('customermaster', 'email')->ignore($customer->customer_id, 'customer_id')],
+            'phone' => ['required', 'string', 'max:20'],
+            'gst_number' => ['nullable', 'string', 'max:15', 'regex:/^[0-9A-Z]{15}$/i', Rule::unique('customermaster', 'gst_number')->ignore($customer->customer_id, 'customer_id')],
+            'billing_address' => ['nullable', 'string', 'max:2000'],
+            'shipping_address' => ['nullable', 'string', 'max:2000'],
+        ]);
+
         try {
-
-            $customer = Customer::findOrFail($id);
-
-            $validatedData = $request->validate([
-                'customer_name' => 'required|max:100',
-                'email' => 'nullable|email|max:100|unique:customermaster,email,'.$customer->customer_id.',customer_id',
-                'phone' => 'required|max:20',
-                'gst_number' => 'nullable|max:15|unique:customermaster,gst_number,'.$customer->customer_id.',customer_id',
-                'billing_address' => 'nullable',
-                'shipping_address' => 'nullable',
-            ], [
-                'customer_name.required' => 'Customer name is required.',
-                'customer_name.max' => 'Customer name must not exceed 100 characters.',
-                'email.email' => 'Please enter a valid email address.',
-                'email.unique' => 'Email already exists.',
-                'phone.required' => 'Phone number is required.',
-                'gst_number.unique' => 'GST Number already exists.',
-            ], [
-                'customer_name' => 'Customer Name',
-                'email' => 'Email',
-                'phone' => 'Phone',
-                'gst_number' => 'GST Number',
-                'billing_address' => 'Billing Address',
-                'shipping_address' => 'Shipping Address',
-            ]);
-
-            DB::beginTransaction();
-
-            $userId = $request->cookie('GTA');
-
-            $customer->update([
+            $userId = (int) $request->attributes->get('authenticated_user_id');
+            DB::transaction(function () use ($customer, $validatedData, $userId): void {
+                $customer->update([
                 'customer_name' => $validatedData['customer_name'],
                 'email' => $validatedData['email'] ?? null,
                 'phone' => $validatedData['phone'],
@@ -170,29 +123,18 @@ class customerController extends Controller
                 'billing_address' => $validatedData['billing_address'] ?? null,
                 'shipping_address' => $validatedData['shipping_address'] ?? null,
                 'updated_by' => $userId,
-                'updated_on' => now(),
-            ]);
-
-            DB::commit();
+                ]);
+            });
 
             return redirect()
                 ->route('customers.index')
                 ->with('success', 'Customer updated successfully.');
-
-        // } catch (ValidationException $e) {
-
-        //     return redirect()
-        //         ->back()
-        //         ->withErrors($e->validator)
-        //         ->withInput();
-
-        } catch (\Exception $e) {
-
-            DB::rollBack();
+        } catch (\Throwable $e) {
+            report($e);
 
             return redirect()
                 ->back()
-                ->with('error', $e->getMessage())
+                ->with('error', 'Unable to update the customer. Please try again.')
                 ->withInput();
         }
     }
@@ -204,7 +146,7 @@ class customerController extends Controller
 
             Customer::where('customer_id', $id)
                 ->update([
-                    'status' => 'inactive',
+                    'status' => '0',
                     'updated_by' => request()->cookie('GTA'),
                     'deleted_at' => now(),
                 ]);
